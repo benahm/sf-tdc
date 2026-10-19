@@ -1,0 +1,41 @@
+name: publish
+on:
+  release:
+    # both release and prereleases
+    types: [published]
+  # support manual release in case something goes wrong and needs to be repeated or tested
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: github tag that needs to publish
+        type: string
+        required: true
+
+# npm trusted publishing (OIDC): no NPM_TOKEN secret needed once the GitHub
+# repository is declared as trusted publisher on npmjs.com.
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+      - run: bun install --frozen-lockfile
+      - name: Publish
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          # a prerelease version (0.0.2-beta) is published under its tag (beta), never as latest
+          TAG=$(node -p "('$VERSION'.split('-')[1] || 'latest').split('.')[0]")
+          npm publish --provenance --access public --tag "$TAG"

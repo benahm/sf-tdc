@@ -1,0 +1,142 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/TdcHistoryResult",
+  "definitions": {
+    "TdcHistoryResult": {
+      "type": "object",
+      "properties": {
+        "debt": {
+          "type": "number"
+        },
+        "commits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/HistoryEntry"
+          }
+        },
+        "forecast": {
+          "$ref": "#/definitions/Forecast"
+        }
+      },
+      "required": [
+        "debt",
+        "commits"
+      ],
+      "additionalProperties": false
+    },
+    "HistoryEntry": {
+      "type": "object",
+      "properties": {
+        "sha": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/CommitKind"
+        },
+        "debt": {
+          "type": "number",
+          "description": "Debt after the commit, in TDC."
+        },
+        "paid": {
+          "type": "number"
+        },
+        "deleted": {
+          "type": "number"
+        },
+        "created": {
+          "type": "number"
+        },
+        "moved": {
+          "type": "number"
+        },
+        "coins": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "sha",
+        "author",
+        "email",
+        "date",
+        "subject",
+        "kind",
+        "debt",
+        "paid",
+        "deleted",
+        "created",
+        "moved",
+        "coins"
+      ],
+      "additionalProperties": false
+    },
+    "CommitKind": {
+      "type": "string",
+      "enum": [
+        "baseline",
+        "rules-changed",
+        "scored"
+      ],
+      "description": "- `baseline`: the first ledger of the history: its debt was not created by the commit.\n- `rules-changed`: rules or costs changed: the debt is re-baselined, nobody wins or loses coins.\n- `scored`: the commit paid or created debt."
+    },
+    "Forecast": {
+      "type": "object",
+      "properties": {
+        "paidPerDay": {
+          "type": "number",
+          "description": "Debt paid per day over the history, negative when the debt grows."
+        },
+        "payoffDate": {
+          "type": "string",
+          "description": "When the debt reaches 0 at this pace."
+        },
+        "goal": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "progress": {
+              "type": "number",
+              "description": "Share of the way from the first debt of the history to the goal."
+            },
+            "projectedDebt": {
+              "type": "number"
+            },
+            "onTrack": {
+              "type": "boolean"
+            },
+            "debt": {
+              "type": "number",
+              "description": "Debt to reach, in TDC."
+            },
+            "date": {
+              "type": "string",
+              "description": "Deadline, as YYYY-MM-DD."
+            }
+          },
+          "required": [
+            "date",
+            "debt",
+            "onTrack",
+            "progress",
+            "projectedDebt"
+          ]
+        }
+      },
+      "required": [
+        "paidPerDay"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/TdcInitResult",
+  "definitions": {
+    "TdcInitResult": {
+      "type": "object",
+      "properties": {
+        "configFile": {
+          "type": "string"
+        },
+        "config": {
+          "$ref": "#/definitions/TdcConfig"
+        }
+      },
+      "required": [
+        "configFile",
+        "config"
+      ],
+      "additionalProperties": false
+    },
+    "TdcConfig": {
+      "type": "object",
+      "properties": {
+        "sourceDirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Folders to scan, relative to the project root. Defaults to the packageDirectories of sfdx-project.json."
+        },
+        "minApiVersion": {
+          "type": "number",
+          "description": "Metadata older than this API version is debt. Defaults to sourceApiVersion minus 9 (3 years of releases)."
+        },
+        "dailyRate": {
+          "type": "number",
+          "description": "Cost of a day of work, to price the debt."
+        },
+        "currency": {
+          "type": "string"
+        },
+        "hoursPerDay": {
+          "type": "number"
+        },
+        "rules": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/RuleSetting"
+          }
+        },
+        "goal": {
+          "$ref": "#/definitions/Goal"
+        },
+        "game": {
+          "type": "object",
+          "properties": {
+            "rewardDeletedFiles": {
+              "type": "boolean",
+              "description": "Whether deleting a whole file earns the coins of its debt."
+            }
+          },
+          "required": [
+            "rewardDeletedFiles"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "dailyRate",
+        "currency",
+        "hoursPerDay",
+        "rules",
+        "game"
+      ],
+      "additionalProperties": false
+    },
+    "RuleSetting": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "cost": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Goal": {
+      "type": "object",
+      "properties": {
+        "debt": {
+          "type": "number",
+          "description": "Debt to reach, in TDC."
+        },
+        "date": {
+          "type": "string",
+          "description": "Deadline, as YYYY-MM-DD."
+        }
+      },
+      "required": [
+        "debt",
+        "date"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

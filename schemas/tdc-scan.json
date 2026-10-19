@@ -1,0 +1,225 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/TdcScanResult",
+  "definitions": {
+    "TdcScanResult": {
+      "$ref": "#/definitions/ScanReport"
+    },
+    "ScanReport": {
+      "type": "object",
+      "properties": {
+        "debt": {
+          "type": "number"
+        },
+        "price": {
+          "$ref": "#/definitions/Price"
+        },
+        "rating": {
+          "$ref": "#/definitions/Rating"
+        },
+        "debtRatio": {
+          "type": "number"
+        },
+        "linesOfCode": {
+          "type": "number"
+        },
+        "byRule": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RuleTotal"
+          }
+        },
+        "topFiles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FileTotal"
+          },
+          "description": "Most indebted files first: the first one is the boss."
+        },
+        "sinceLedger": {
+          "type": "object",
+          "properties": {
+            "paid": {
+              "type": "number"
+            },
+            "deleted": {
+              "type": "number"
+            },
+            "created": {
+              "type": "number"
+            },
+            "moved": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "paid",
+            "deleted",
+            "created",
+            "moved"
+          ],
+          "additionalProperties": false,
+          "description": "Changes since the ledger found on disk before the scan, in TDC."
+        },
+        "ledgerFile": {
+          "type": "string"
+        },
+        "ledgerWritten": {
+          "type": "boolean"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Finding"
+          }
+        }
+      },
+      "required": [
+        "debt",
+        "price",
+        "rating",
+        "debtRatio",
+        "linesOfCode",
+        "byRule",
+        "topFiles",
+        "ledgerFile",
+        "ledgerWritten",
+        "findings"
+      ],
+      "additionalProperties": false
+    },
+    "Price": {
+      "type": "object",
+      "properties": {
+        "manDays": {
+          "type": "number"
+        },
+        "amount": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "manDays",
+        "amount",
+        "currency"
+      ],
+      "additionalProperties": false
+    },
+    "Rating": {
+      "type": "string",
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ]
+    },
+    "RuleTotal": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "count": {
+          "type": "number"
+        },
+        "cost": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "rule",
+        "category",
+        "summary",
+        "count",
+        "cost"
+      ],
+      "additionalProperties": false
+    },
+    "FileTotal": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "count": {
+          "type": "number"
+        },
+        "cost": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "file",
+        "count",
+        "cost"
+      ],
+      "additionalProperties": false
+    },
+    "Finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "$ref": "#/definitions/RuleCategory"
+        },
+        "line": {
+          "type": "number"
+        },
+        "message": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string",
+          "description": "Unique in the ledger: file, rule, snippet and rank among the identical findings of the file."
+        },
+        "rule": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "cost": {
+          "type": "number"
+        },
+        "hash": {
+          "type": "string",
+          "description": "Rule and snippet, without the file: the same debt moved to another file keeps it."
+        },
+        "snippet": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "cost",
+        "file",
+        "hash",
+        "id",
+        "message",
+        "rule",
+        "snippet"
+      ]
+    },
+    "RuleCategory": {
+      "type": "string",
+      "enum": [
+        "Apex",
+        "Tests",
+        "Automation",
+        "UI",
+        "Metadata"
+      ]
+    }
+  }
+}

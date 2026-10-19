@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/TdcCheckResult",
+  "definitions": {
+    "TdcCheckResult": {
+      "type": "object",
+      "properties": {
+        "passed": {
+          "type": "boolean"
+        },
+        "debt": {
+          "type": "number"
+        },
+        "ledgerUpToDate": {
+          "type": "boolean"
+        },
+        "sinceBase": {
+          "type": "object",
+          "properties": {
+            "base": {
+              "type": "string"
+            },
+            "paid": {
+              "type": "number"
+            },
+            "created": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "base",
+            "paid",
+            "created"
+          ],
+          "additionalProperties": false,
+          "description": "Changes since --base, in TDC."
+        },
+        "failures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "passed",
+        "debt",
+        "ledgerUpToDate",
+        "failures"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

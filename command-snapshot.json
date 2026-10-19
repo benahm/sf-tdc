@@ -1,0 +1,83 @@
+[
+    {
+        "alias": [],
+        "command": "tdc:check",
+        "flagAliases": [],
+        "flagChars": [
+            "b"
+        ],
+        "flags": [
+            "base",
+            "flags-dir",
+            "json",
+            "max-debt"
+        ],
+        "plugin": "sf-tdc"
+    },
+    {
+        "alias": [],
+        "command": "tdc:history",
+        "flagAliases": [],
+        "flagChars": [],
+        "flags": [
+            "flags-dir",
+            "json",
+            "limit",
+            "since"
+        ],
+        "plugin": "sf-tdc"
+    },
+    {
+        "alias": [],
+        "command": "tdc:init",
+        "flagAliases": [],
+        "flagChars": [],
+        "flags": [
+            "currency",
+            "daily-rate",
+            "flags-dir",
+            "force",
+            "goal-date",
+            "goal-debt",
+            "json"
+        ],
+        "plugin": "sf-tdc"
+    },
+    {
+        "alias": [],
+        "command": "tdc:leaderboard",
+        "flagAliases": [],
+        "flagChars": [
+            "a"
+        ],
+        "flags": [
+            "author",
+            "flags-dir",
+            "json",
+            "limit",
+            "me",
+            "payments",
+            "since",
+            "team"
+        ],
+        "plugin": "sf-tdc"
+    },
+    {
+        "alias": [],
+        "command": "tdc:scan",
+        "flagAliases": [],
+        "flagChars": [
+            "d",
+            "r"
+        ],
+        "flags": [
+            "details",
+            "dry-run",
+            "flags-dir",
+            "json",
+            "report-file",
+            "source-dir"
+        ],
+        "plugin": "sf-tdc"
+    }
+]

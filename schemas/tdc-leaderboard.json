@@ -1,0 +1,192 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/TdcLeaderboardResult",
+  "definitions": {
+    "TdcLeaderboardResult": {
+      "type": "object",
+      "properties": {
+        "players": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Player"
+          },
+          "description": "Empty with --team."
+        },
+        "player": {
+          "$ref": "#/definitions/Player",
+          "description": "The developer of --me or --author."
+        },
+        "team": {
+          "$ref": "#/definitions/TeamTotal"
+        }
+      },
+      "required": [
+        "players",
+        "team"
+      ],
+      "additionalProperties": false
+    },
+    "Player": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "coins": {
+          "type": "number"
+        },
+        "paid": {
+          "type": "number",
+          "description": "TDC paid, created, and removed with deleted files."
+        },
+        "created": {
+          "type": "number"
+        },
+        "deleted": {
+          "type": "number"
+        },
+        "commits": {
+          "type": "number",
+          "description": "Commits that paid or created debt."
+        },
+        "rank": {
+          "type": "string"
+        },
+        "nextRank": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "coinsToGo": {
+              "type": "number"
+            },
+            "progress": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "name",
+            "coinsToGo",
+            "progress"
+          ],
+          "additionalProperties": false,
+          "description": "Progress from the current rank to the next one, between 0 and 1."
+        },
+        "badges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Badge"
+          }
+        },
+        "payments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Payment"
+          },
+          "description": "Most recent first."
+        }
+      },
+      "required": [
+        "author",
+        "email",
+        "coins",
+        "paid",
+        "created",
+        "deleted",
+        "commits",
+        "rank",
+        "badges",
+        "payments"
+      ],
+      "additionalProperties": false
+    },
+    "Badge": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "icon",
+        "name",
+        "description"
+      ],
+      "additionalProperties": false
+    },
+    "Payment": {
+      "type": "object",
+      "properties": {
+        "sha": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "rule": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "cost": {
+          "type": "number"
+        },
+        "snippet": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sha",
+        "date",
+        "rule",
+        "file",
+        "cost",
+        "snippet"
+      ],
+      "additionalProperties": false
+    },
+    "TeamTotal": {
+      "type": "object",
+      "properties": {
+        "coins": {
+          "type": "number"
+        },
+        "paid": {
+          "type": "number"
+        },
+        "created": {
+          "type": "number"
+        },
+        "deleted": {
+          "type": "number"
+        },
+        "commits": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "coins",
+        "paid",
+        "created",
+        "deleted",
+        "commits"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

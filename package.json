@@ -1,0 +1,98 @@
+{
+  "name": "sf-tdc",
+  "description": "Technical Debt Collector: a Salesforce CLI plugin that prices the technical debt of a project and tracks who pays it back",
+  "version": "0.0.1-beta",
+  "dependencies": {
+    "@oclif/core": "^5.0.0",
+    "@salesforce/core": "^9.1.11",
+    "@salesforce/sf-plugins-core": "^13.0.4",
+    "@salesforce/source-deploy-retrieve": "^13.6.0",
+    "fast-xml-parser": "5.5.3"
+  },
+  "devDependencies": {
+    "@oclif/plugin-command-snapshot": "^6.0.2",
+    "@salesforce/cli-plugins-testkit": "^5.3.68",
+    "@salesforce/dev-scripts": "^15.0.0",
+    "@salesforce/plugin-command-reference": "^3.1.134",
+    "@types/chai": "^4.3.17",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^18.19.130",
+    "eslint": "^10.12.0",
+    "eslint-config-salesforce-typescript": "^7.0.0",
+    "eslint-plugin-sf-plugin": "^3.0.0",
+    "oclif": "^5.0.2",
+    "oxfmt": "^0.40.0",
+    "oxlint": "^1.55.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "/lib",
+    "/messages",
+    "/oclif.manifest.json",
+    "/schemas"
+  ],
+  "keywords": [
+    "force",
+    "salesforce",
+    "salesforcedx",
+    "sf",
+    "sf-plugin",
+    "sfdx",
+    "sfdx-plugin",
+    "technical-debt"
+  ],
+  "license": "BSD-3-Clause",
+  "oclif": {
+    "commands": "./lib/commands",
+    "bin": "sf",
+    "topicSeparator": " ",
+    "devPlugins": [
+      "@oclif/plugin-help",
+      "@oclif/plugin-command-snapshot",
+      "@salesforce/plugin-command-reference"
+    ],
+    "topics": {
+      "tdc": {
+        "description": "Technical Debt Collector commands."
+      }
+    },
+    "flexibleTaxonomy": true
+  },
+  "scripts": {
+    "build": "npm run compile && npm run lint",
+    "clean": "sf-clean",
+    "clean-all": "sf-clean all",
+    "compile": "tsc -p . --pretty --incremental",
+    "docs": "sf-docs",
+    "format": "oxfmt --write \"src/**/*.{ts,js}\" \"test/**/*.{ts,js}\"",
+    "format:check": "oxfmt --check \"src/**/*.{ts,js}\" \"test/**/*.{ts,js}\"",
+    "lint": "oxlint src test --deny-warnings && eslint src test --cache --cache-location .eslintcache",
+    "lint:fix": "oxlint src test --fix && eslint src test --fix",
+    "postpack": "sf-clean --ignore-signing-artifacts",
+    "prepack": "sf-clean && tsc -p . --pretty && oclif manifest",
+    "test": "npm run test:compile && npm run test:only && npm run test:command-reference && npm run test:deprecation-policy && npm run test:json-schema && npm run lint",
+    "test:command-reference": "node --loader ts-node/esm --no-warnings=ExperimentalWarning ./bin/dev.js commandreference:generate --error-on-warnings",
+    "test:compile": "tsc -p \"./test\" --pretty",
+    "test:deprecation-policy": "node --loader ts-node/esm --no-warnings=ExperimentalWarning ./bin/dev.js snapshot:compare",
+    "test:json-schema": "node --loader ts-node/esm --no-warnings=ExperimentalWarning ./bin/dev.js schema:compare",
+    "test:only": "nyc mocha \"test/**/*.test.ts\"",
+    "version": "oclif readme"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": "./lib/index.js",
+  "type": "module",
+  "author": "ahmed",
+  "bugs": "https://github.com/benahm/sf-tdc/issues",
+  "packageManager": "bun@1.3.10",
+  "homepage": "https://github.com/benahm/sf-tdc",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benahm/sf-tdc.git"
+  }
+}
