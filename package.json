@@ -90,7 +90,7 @@
   "type": "module",
   "author": "ahmed",
   "bugs": "https://github.com/benahm/sf-tdc/issues",
-  "packageManager": "bun@1.3.10",
+  "packageManager": "bun@1.4.3",
   "homepage": "https://github.com/benahm/sf-tdc",
   "repository": {
     "type": "git",
