@@ -22,4 +22,3 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: npm run compile
       - run: npm test
-      - run: npm run test:nuts

@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -84,9 +84,16 @@ const readJson = async <T>(file: string): Promise<T | undefined> => {
 
 export const toPosix = (file: string): string => file.split(path.sep).join('/');
 
+/**
+ * The canonical form of an existing path: git prints long paths, while a Windows temporary folder can be given in its
+ * short 8.3 form (RUNNER~1), and paths relative to each other would then be wrong.
+ */
+const canonical = (file: string): string => realpathSync.native(path.resolve(file));
+
 export const loadProject = async (cwd: string, sourceDirs?: string[]): Promise<Project> => {
-  const repoRoot = await gitRoot(cwd);
-  const root = findUp(cwd, 'sfdx-project.json') ?? repoRoot ?? path.resolve(cwd);
+  const gitTopLevel = await gitRoot(cwd);
+  const repoRoot = gitTopLevel ? canonical(gitTopLevel) : undefined;
+  const root = canonical(findUp(cwd, 'sfdx-project.json') ?? repoRoot ?? cwd);
   const sfdxProject = (await readJson<SfdxProjectJson>(path.join(root, 'sfdx-project.json'))) ?? {};
   const configFile = path.join(root, TDC_DIR, CONFIG_FILE);
   const stored = (await readJson<Partial<TdcConfig>>(configFile)) ?? {};
