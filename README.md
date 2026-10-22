@@ -16,6 +16,8 @@ Since the last ledger: paid 1,240 TDC 🎉 · new debt +90 TDC
 👹 Boss: force-app/main/default/classes/InvoiceService.cls (4,210 HP)
 ```
 
+📖 **Documentation: <https://benahm.github.io/sf-tdc/>**
+
 ## Install
 
 ```bash
