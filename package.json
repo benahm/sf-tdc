@@ -3,7 +3,7 @@
   "description": "Technical Debt Collector: a Salesforce CLI plugin that prices the technical debt of a project and tracks who pays it back",
   "version": "0.0.1-beta",
   "dependencies": {
-    "@oclif/core": "^5.0.0",
+    "@oclif/core": "^5.1.9",
     "@salesforce/core": "^9.1.11",
     "@salesforce/sf-plugins-core": "^13.0.4",
     "@salesforce/source-deploy-retrieve": "^13.6.0",
