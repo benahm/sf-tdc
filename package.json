@@ -11,7 +11,7 @@
     "@salesforce/code-analyzer-regex-engine": "0.40.0",
     "@salesforce/core": "^9.1.11",
     "@salesforce/sf-plugins-core": "^13.0.4",
-    "@salesforce/source-deploy-retrieve": "^13.6.0"
+    "@salesforce/source-deploy-retrieve": "^13.7.0"
   },
   "devDependencies": {
     "@oclif/plugin-command-snapshot": "^6.0.2",
