@@ -95,6 +95,25 @@
             "rewardDeletedFiles"
           ],
           "additionalProperties": false
+        },
+        "verifier": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string",
+              "description": "Shell command that reads the prompt on its standard input, such as \"claude -p\" or \"codex exec -\"."
+            },
+            "runs": {
+              "type": "number",
+              "description": "Times a prompt is asked: every answer must agree."
+            }
+          },
+          "required": [
+            "command",
+            "runs"
+          ],
+          "additionalProperties": false,
+          "description": "The agent that answers the prompt verifiers of declared debt."
         }
       },
       "required": [

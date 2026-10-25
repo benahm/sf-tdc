@@ -57,6 +57,18 @@ Fair play:
 
 Every command supports `--json`; its format is pinned by [`schemas/`](schemas).
 
+### For AI agents
+
+| Command | |
+| --- | --- |
+| `sf tdc guide` | How an agent works with sf-tdc: the workflows, what it must never do, the format of a declared debt. |
+| `sf tdc next` | The work queue: the debt to fix, most expensive first, with its file, line and the command that verifies it. `--limit`, `--file`, `--rule`, `--source`. |
+| `sf tdc verify` | Whether the changes since HEAD paid the debt (`--id`), created none, and hid none: a suppression (`NOPMD`, `@SuppressWarnings`...) or a change of `.forceignore` or `code-analyzer.yml` is not a payment. Exit code 1 otherwise, with the next steps. |
+| `sf tdc add` | Declares debt that the rules don't find, with a verifier (a pattern, or a prompt) that must find it on the current code. |
+| `sf tdc reject` | Sets a declared debt aside: a false positive, for a person to decide. |
+
+An agent instruction can say: *run `sf tdc guide --json` and follow it.*
+
 ### In a pull request
 
 ```bash

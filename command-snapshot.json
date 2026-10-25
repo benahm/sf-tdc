@@ -1,6 +1,20 @@
 [
     {
         "alias": [],
+        "command": "tdc:add",
+        "flagAliases": [],
+        "flagChars": [
+            "f"
+        ],
+        "flags": [
+            "file",
+            "flags-dir",
+            "json"
+        ],
+        "plugin": "sf-tdc"
+    },
+    {
+        "alias": [],
         "command": "tdc:check",
         "flagAliases": [],
         "flagChars": [
@@ -11,6 +25,17 @@
             "flags-dir",
             "json",
             "max-debt"
+        ],
+        "plugin": "sf-tdc"
+    },
+    {
+        "alias": [],
+        "command": "tdc:guide",
+        "flagAliases": [],
+        "flagChars": [],
+        "flags": [
+            "flags-dir",
+            "json"
         ],
         "plugin": "sf-tdc"
     },
@@ -64,6 +89,41 @@
     },
     {
         "alias": [],
+        "command": "tdc:next",
+        "flagAliases": [],
+        "flagChars": [
+            "f",
+            "n",
+            "r"
+        ],
+        "flags": [
+            "file",
+            "flags-dir",
+            "json",
+            "limit",
+            "rule",
+            "source"
+        ],
+        "plugin": "sf-tdc"
+    },
+    {
+        "alias": [],
+        "command": "tdc:reject",
+        "flagAliases": [],
+        "flagChars": [
+            "i",
+            "m"
+        ],
+        "flags": [
+            "flags-dir",
+            "id",
+            "json",
+            "reason"
+        ],
+        "plugin": "sf-tdc"
+    },
+    {
+        "alias": [],
         "command": "tdc:scan",
         "flagAliases": [],
         "flagChars": [
@@ -77,6 +137,20 @@
             "json",
             "report-file",
             "source-dir"
+        ],
+        "plugin": "sf-tdc"
+    },
+    {
+        "alias": [],
+        "command": "tdc:verify",
+        "flagAliases": [],
+        "flagChars": [
+            "i"
+        ],
+        "flags": [
+            "flags-dir",
+            "id",
+            "json"
         ],
         "plugin": "sf-tdc"
     }

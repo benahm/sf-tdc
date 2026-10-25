@@ -8,7 +8,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Guides',
       collapsed: false,
-      items: ['guides/ledger', 'guides/game', 'guides/ci', 'guides/configuration'],
+      items: ['guides/ledger', 'guides/game', 'guides/ci', 'guides/ai-agents', 'guides/configuration'],
     },
     'rules',
     {

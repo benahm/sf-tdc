@@ -11,7 +11,18 @@ const outputDir = path.join(root, 'website/docs/commands');
 const repoUrl = 'https://github.com/benahm/sf-tdc';
 
 // Sidebar order: the order in which a project uses them.
-const ORDER = ['tdc:init', 'tdc:scan', 'tdc:history', 'tdc:leaderboard', 'tdc:check'];
+const ORDER = [
+  'tdc:init',
+  'tdc:scan',
+  'tdc:history',
+  'tdc:leaderboard',
+  'tdc:check',
+  'tdc:guide',
+  'tdc:next',
+  'tdc:verify',
+  'tdc:add',
+  'tdc:reject',
+];
 const GLOBAL_FLAGS = new Set(['json', 'flags-dir']);
 
 if (!existsSync(manifestPath)) {

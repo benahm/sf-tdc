@@ -38,6 +38,13 @@ export type TdcConfig = {
     /** Whether deleting a whole file earns the coins of its debt. */
     rewardDeletedFiles: boolean;
   };
+  /** The agent that answers the prompt verifiers of declared debt. */
+  verifier?: {
+    /** Shell command that reads the prompt on its standard input, such as "claude -p" or "codex exec -". */
+    command: string;
+    /** Times a prompt is asked: every answer must agree. */
+    runs: number;
+  };
 };
 
 export const DEFAULT_CONFIG: TdcConfig = {
@@ -105,6 +112,7 @@ export const loadProject = async (cwd: string, sourceDirs?: string[]): Promise<P
     severityCosts: { ...DEFAULT_CONFIG.severityCosts, ...stored.severityCosts },
     rules: { ...stored.rules },
     game: { ...DEFAULT_CONFIG.game, ...stored.game },
+    ...(stored.verifier?.command ? { verifier: { ...stored.verifier, runs: stored.verifier.runs ?? 3 } } : {}),
   };
 
   const packageDirs = (sfdxProject.packageDirectories ?? []).flatMap((dir) => (dir.path ? [dir.path] : []));

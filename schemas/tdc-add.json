@@ -1,0 +1,240 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/TdcAddResult",
+  "definitions": {
+    "TdcAddResult": {
+      "type": "object",
+      "properties": {
+        "debt": {
+          "$ref": "#/definitions/DeclaredDebt"
+        },
+        "file": {
+          "type": "string",
+          "description": "File of the debt, relative to the project root: commit it."
+        }
+      },
+      "required": [
+        "debt",
+        "file"
+      ],
+      "additionalProperties": false
+    },
+    "DeclaredDebt": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "agent",
+            "human"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "Security",
+            "Performance",
+            "ErrorProne",
+            "BestPractices",
+            "Design"
+          ]
+        },
+        "criticality": {
+          "$ref": "#/definitions/Criticality"
+        },
+        "severity": {
+          "$ref": "#/definitions/Severity",
+          "description": "Computed from the criticality."
+        },
+        "cost": {
+          "type": "number",
+          "description": "Computed from the severity, as for the rules."
+        },
+        "anchors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Anchor"
+          }
+        },
+        "verifier": {
+          "$ref": "#/definitions/Verifier"
+        },
+        "status": {
+          "$ref": "#/definitions/DeclaredStatus"
+        },
+        "calibration": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Verdict"
+          },
+          "description": "Verdicts of the verifier on the code when the debt was declared: all of them found the debt."
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "title",
+        "description",
+        "category",
+        "criticality",
+        "severity",
+        "cost",
+        "anchors",
+        "verifier",
+        "status",
+        "calibration"
+      ],
+      "additionalProperties": false,
+      "description": "Debt that the rules don't find, declared by an agent or a person, with the way to verify that it is fixed."
+    },
+    "Criticality": {
+      "type": "object",
+      "properties": {
+        "exposure": {
+          "type": "string",
+          "enum": [
+            "anonymous",
+            "user",
+            "admin"
+          ],
+          "description": "Who can trigger the problem."
+        },
+        "impact": {
+          "type": "string",
+          "enum": [
+            "data-leak",
+            "data-corruption",
+            "limits",
+            "performance",
+            "maintainability"
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "record",
+            "bulk"
+          ],
+          "description": "One record, or many at once (a batch, a data load, a bulk API call)."
+        }
+      },
+      "required": [
+        "exposure",
+        "impact",
+        "scope"
+      ],
+      "additionalProperties": false,
+      "description": "Facts about the debt, rather than a level: two runs of an agent agree on facts far more often than on a level."
+    },
+    "Severity": {
+      "type": "string",
+      "enum": [
+        "Critical",
+        "High",
+        "Moderate",
+        "Low",
+        "Info"
+      ]
+    },
+    "Anchor": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "snippet": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "file",
+        "snippet"
+      ],
+      "additionalProperties": false,
+      "description": "A place of the code where the debt is, found again by its snippet: the line can move."
+    },
+    "Verifier": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "pattern"
+            },
+            "file": {
+              "type": "string"
+            },
+            "pattern": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "file",
+            "pattern"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "prompt"
+            },
+            "prompt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "prompt"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "- `pattern`: a regular expression that matches the file while the debt is there. Deterministic.\n- `prompt`: a question answered by the agent command of .tdc/config.json, several times. Probabilistic."
+    },
+    "DeclaredStatus": {
+      "type": "string",
+      "enum": [
+        "confirmed",
+        "fixed",
+        "rejected"
+      ]
+    },
+    "Verdict": {
+      "type": "object",
+      "properties": {
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "present",
+            "fixed",
+            "unclear"
+          ]
+        },
+        "evidence": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

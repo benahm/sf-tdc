@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/TdcNextResult",
+  "definitions": {
+    "TdcNextResult": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkItem"
+          }
+        },
+        "total": {
+          "type": "number",
+          "description": "Debt matching the filters, the items included."
+        },
+        "remaining": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "items",
+        "total",
+        "remaining"
+      ],
+      "additionalProperties": false
+    },
+    "WorkItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "code-analyzer",
+            "agent",
+            "human"
+          ]
+        },
+        "cost": {
+          "type": "number"
+        },
+        "rule": {
+          "type": "string",
+          "description": "`engine:rule` of code-analyzer, or `declared:<category>`."
+        },
+        "problem": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "number"
+        },
+        "snippet": {
+          "type": "string"
+        },
+        "verify": {
+          "type": "string",
+          "description": "The command that tells whether it is fixed."
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "cost",
+        "rule",
+        "problem",
+        "file",
+        "snippet",
+        "verify"
+      ],
+      "additionalProperties": false,
+      "description": "A debt to fix, whatever found it: enough for an agent to act without reading anything else."
+    }
+  }
+}

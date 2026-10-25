@@ -1,0 +1,278 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/TdcGuideResult",
+  "definitions": {
+    "TdcGuideResult": {
+      "$ref": "#/definitions/Guide"
+    },
+    "Guide": {
+      "type": "object",
+      "properties": {
+        "workflows": {
+          "type": "object",
+          "properties": {
+            "fix": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "declare": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "fix",
+            "declare"
+          ],
+          "additionalProperties": false
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "declare": {
+          "type": "object",
+          "properties": {
+            "example": {
+              "$ref": "#/definitions/DebtInput"
+            },
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "criticality": {
+              "type": "object",
+              "properties": {
+                "exposure": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "impact": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "scope": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "severity": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "exposure",
+                "impact",
+                "scope",
+                "severity"
+              ],
+              "additionalProperties": false
+            },
+            "costs": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              }
+            },
+            "verifiers": {
+              "type": "object",
+              "properties": {
+                "pattern": {
+                  "type": "string"
+                },
+                "prompt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "pattern",
+                "prompt"
+              ],
+              "additionalProperties": false
+            },
+            "promptVerifier": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "example",
+            "categories",
+            "criticality",
+            "costs",
+            "verifiers",
+            "promptVerifier"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "workflows",
+        "rules",
+        "declare"
+      ],
+      "additionalProperties": false
+    },
+    "DebtInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "agent",
+            "human"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "Security",
+            "Performance",
+            "ErrorProne",
+            "BestPractices",
+            "Design"
+          ]
+        },
+        "criticality": {
+          "$ref": "#/definitions/Criticality"
+        },
+        "anchors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Anchor"
+          }
+        },
+        "verifier": {
+          "$ref": "#/definitions/Verifier"
+        }
+      },
+      "required": [
+        "anchors",
+        "category",
+        "criticality",
+        "description",
+        "title",
+        "verifier"
+      ],
+      "description": "What an agent sends to `sf tdc add`: the rest is computed."
+    },
+    "Criticality": {
+      "type": "object",
+      "properties": {
+        "exposure": {
+          "type": "string",
+          "enum": [
+            "anonymous",
+            "user",
+            "admin"
+          ],
+          "description": "Who can trigger the problem."
+        },
+        "impact": {
+          "type": "string",
+          "enum": [
+            "data-leak",
+            "data-corruption",
+            "limits",
+            "performance",
+            "maintainability"
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "record",
+            "bulk"
+          ],
+          "description": "One record, or many at once (a batch, a data load, a bulk API call)."
+        }
+      },
+      "required": [
+        "exposure",
+        "impact",
+        "scope"
+      ],
+      "additionalProperties": false,
+      "description": "Facts about the debt, rather than a level: two runs of an agent agree on facts far more often than on a level."
+    },
+    "Anchor": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "snippet": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "file",
+        "snippet"
+      ],
+      "additionalProperties": false,
+      "description": "A place of the code where the debt is, found again by its snippet: the line can move."
+    },
+    "Verifier": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "pattern"
+            },
+            "file": {
+              "type": "string"
+            },
+            "pattern": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "file",
+            "pattern"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "prompt"
+            },
+            "prompt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "prompt"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "- `pattern`: a regular expression that matches the file while the debt is there. Deterministic.\n- `prompt`: a question answered by the agent command of .tdc/config.json, several times. Probabilistic."
+    }
+  }
+}
