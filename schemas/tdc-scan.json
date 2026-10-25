@@ -171,7 +171,7 @@
       "additionalProperties": false,
       "properties": {
         "category": {
-          "$ref": "#/definitions/RuleCategory"
+          "type": "string"
         },
         "line": {
           "type": "number"
@@ -209,16 +209,6 @@
         "message",
         "rule",
         "snippet"
-      ]
-    },
-    "RuleCategory": {
-      "type": "string",
-      "enum": [
-        "Apex",
-        "Tests",
-        "Automation",
-        "UI",
-        "Metadata"
       ]
     }
   }

@@ -9,13 +9,17 @@ history in git: there is no server and no database.
 
 ```json
 {
-  "version": 1,
+  "version": 2,
+  "engines": {
+    "core": "0.53.0",
+    "pmd": "0.46.0"
+  },
   "rules": {
-    "apex-dml-in-loop": 30,
-    "apex-soql-in-loop": 30
+    "pmd:ApexCRUDViolation": 30,
+    "pmd:OperationWithLimitsInLoop": 15
   },
   "findings": [
-    {"id":"3f9c1a2b4d5e","rule":"apex-soql-in-loop","file":"force-app/main/default/classes/InvoiceService.cls","cost":30,"hash":"a1b2c3d4e5f6","snippet":"Invoice__c i = [SELECT Id FROM Invoice__c WHERE Id = :id];"}
+    {"id":"3f9c1a2b4d5e","rule":"pmd:OperationWithLimitsInLoop","file":"force-app/main/default/classes/InvoiceService.cls","cost":15,"hash":"a1b2c3d4e5f6","snippet":"Invoice__c i = [SELECT Id FROM Invoice__c WHERE Id = :id];"}
   ]
 }
 ```
@@ -24,7 +28,8 @@ history in git: there is no server and no database.
   added lines, and two branches only conflict when they change the same findings.
 - **No line numbers.** A finding is identified by its rule, its file, its normalized source line (the `snippet`) and
   its rank among identical findings of the file. Adding code above it changes nothing.
-- **`rules`** holds the cost of each enabled rule when the ledger was written.
+- **`rules`** holds the cost of each enabled rule when the ledger was written, and **`engines`** the versions of Code
+  Analyzer and its engines.
 - **Deterministic.** Scanning unchanged code rewrites nothing, so `sf tdc check` can compare it byte for byte.
 
 ## Who paid what
@@ -41,8 +46,9 @@ history in git: there is no server and no database.
 Some commits never score:
 
 - **Baseline**: the first ledger of the history. Its debt existed before.
-- **Rules changed**: a commit whose ledger has other rules or costs than its parent. Enabling a rule would otherwise
-  charge its author for all the debt the rule finds.
+- **Rules changed**: a commit whose ledger has other rules, costs or engine versions than its parent. Enabling a rule
+  would otherwise charge its author for all the debt the rule finds, and upgrading sf-tdc would pay or charge the
+  changes of the engines.
 - **Merge commits** are skipped: the commits of the merged branch already count. With a squash merge, the squashed
   commit counts, for the author of the pull request.
 

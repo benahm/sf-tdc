@@ -48,4 +48,4 @@ reads. The Technical Debt Collector answers three questions instead:
 - **Nothing outside git.** No server, no database: the [ledger](./guides/ledger.md) is a file of the repository, and
   the scores are computed from its history.
 - **Fair play.** Moving code is neither paying nor creating debt; the first ledger and rule changes don't score.
-- **Offline.** The rules read the source of the project: no org is needed.
+- **Offline.** The rules of [Salesforce Code Analyzer](./rules.md) read the source of the project: no org is needed.

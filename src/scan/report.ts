@@ -4,7 +4,6 @@ import path from 'node:path';
 import { debtRatio, price, rating, type Price, type Rating } from '../game/score.js';
 import { compareLedgers, totalCost, type Ledger } from '../ledger/ledger.js';
 import { toPosix, type Project } from '../project/project.js';
-import { ruleById } from '../rules/registry.js';
 import { formatNumber, formatPrice, formatTdc, signed } from '../report/format.js';
 import { toLedger, type Finding, type ScanResult } from './engine.js';
 
@@ -51,7 +50,7 @@ export const buildReport = (
     const rule = byRule.get(finding.rule) ?? {
       rule: finding.rule,
       category: finding.category,
-      summary: ruleById(finding.rule)?.summary ?? '',
+      summary: result.catalog[finding.rule]?.summary ?? '',
       count: 0,
       cost: 0,
     };

@@ -8,6 +8,8 @@ title: Getting started
 sf plugins install sf-tdc@beta
 ```
 
+The rules of [Salesforce Code Analyzer](./rules.md) need **Java 11+** and **Python 3.10+**.
+
 The plugin is not signed by Salesforce, so `sf` asks you to confirm the installation. In CI, add `sf-tdc` to
 `~/.config/sf/unsignedPluginAllowList.json` to skip the question. Update with `sf plugins update`.
 
@@ -41,17 +43,17 @@ Then scan again and commit the ledger with the fix:
 
 ```text
 $ sf tdc scan
-💰 Technical debt: 48,290 TDC (≈ 115.0 man-days · 68,986 EUR) · rating C
+💰 Technical debt: 48,305 TDC (≈ 115.0 man-days · 69,007 EUR) · rating C
 Since the last ledger: paid 30 TDC 🎉 · new debt 0 TDC
 Ledger written to .tdc/ledger.json: commit it with your changes.
 ```
 
-The commit earns you the 30 TDC you paid:
+The commit earns you the 15 TDC you paid:
 
 ```text
 $ sf tdc leaderboard --me
-👤 Alice — Intern (+30 TDC · #1 of 1)
-Next rank: Collector in 470 TDC █░░░░░░░░░ 6%
+👤 Alice — Intern (+15 TDC · #1 of 1)
+Next rank: Collector in 485 TDC ░░░░░░░░░░ 3%
 Badges: 🪙 First Payment
 ```
 

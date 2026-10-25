@@ -28,9 +28,41 @@
           },
           "description": "Folders to scan, relative to the project root. Defaults to the packageDirectories of sfdx-project.json."
         },
-        "minApiVersion": {
-          "type": "number",
-          "description": "Metadata older than this API version is debt. Defaults to sourceApiVersion minus 9 (3 years of releases)."
+        "ruleSelectors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Rule selectors of code-analyzer: engines, tags, severities or `engine:rule`, combined with a colon."
+        },
+        "severityCosts": {
+          "type": "object",
+          "properties": {
+            "Critical": {
+              "type": "number"
+            },
+            "High": {
+              "type": "number"
+            },
+            "Moderate": {
+              "type": "number"
+            },
+            "Low": {
+              "type": "number"
+            },
+            "Info": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "Critical",
+            "High",
+            "Moderate",
+            "Low",
+            "Info"
+          ],
+          "additionalProperties": false,
+          "description": "Cost of a finding, in TDC, by severity of its rule. A rule of `rules` can have its own cost."
         },
         "dailyRate": {
           "type": "number",
@@ -66,6 +98,8 @@
         }
       },
       "required": [
+        "ruleSelectors",
+        "severityCosts",
         "dailyRate",
         "currency",
         "hoursPerDay",

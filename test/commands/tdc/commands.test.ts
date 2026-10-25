@@ -10,7 +10,7 @@ import TdcCheck from '../../../src/commands/tdc/check.js';
 import TdcInit from '../../../src/commands/tdc/init.js';
 import TdcLeaderboard from '../../../src/commands/tdc/leaderboard.js';
 import TdcScan from '../../../src/commands/tdc/scan.js';
-import { commitAll, createProject, gitInit, removeProject, writeSources } from '../../helpers.js';
+import { commitAll, createProject, gitInit, removeProject, useFakeAnalyzer, writeSources } from '../../helpers.js';
 
 const LOOP = `public class AccountService {
   public void run(List<Account> accounts) {
@@ -19,6 +19,7 @@ const LOOP = `public class AccountService {
 }`;
 
 describe('tdc commands', () => {
+  useFakeAnalyzer();
   const $$ = new TestContext();
   const initialCwd = process.cwd();
   let root: string;
@@ -54,14 +55,14 @@ describe('tdc commands', () => {
 
   it('scan prices the debt, writes the ledger, and reports what was paid since', async () => {
     const first = await TdcScan.run([]);
-    // a class without test (60) and a DML in a loop (30)
-    expect(first.debt).to.equal(90);
+    // a DML in a loop, of moderate severity
+    expect(first.debt).to.equal(15);
     expect(first.ledgerWritten).to.equal(true);
-    expect(first.price.manDays).to.be.closeTo(90 / 60 / 7, 0.001);
+    expect(first.price.manDays).to.be.closeTo(15 / 60 / 7, 0.001);
 
     await writeSources(root, { 'classes/AccountService.cls': LOOP.replace('{ update a; }', '{}') });
     const second = await TdcScan.run(['--report-file', 'report.md']);
-    expect(second.sinceLedger).to.deep.include({ paid: 30, created: 0 });
+    expect(second.sinceLedger).to.deep.include({ paid: 15, created: 0 });
     expect(await readFile(path.join(root, 'report.md'), 'utf8')).to.include('# Technical debt');
   });
 
@@ -87,8 +88,8 @@ describe('tdc commands', () => {
     expect(stale.ledgerUpToDate).to.equal(false);
 
     await TdcScan.run([]);
-    const grew = await TdcCheck.run(['--base', 'HEAD', '--max-debt', '100']);
-    expect(grew.sinceBase).to.deep.equal({ base: 'HEAD', paid: 0, created: 62 });
+    const grew = await TdcCheck.run(['--base', 'HEAD', '--max-debt', '10']);
+    expect(grew.sinceBase).to.deep.equal({ base: 'HEAD', paid: 0, created: 5 });
     expect(grew.failures).to.have.length(2);
   });
 
@@ -100,11 +101,11 @@ describe('tdc commands', () => {
     commitAll(root, 'Bob', 'fix: no DML in loop', '2026-10-02T10:00:00Z');
 
     const board = await TdcLeaderboard.run([]);
-    expect(board.players.map((player) => [player.author, player.coins])).to.deep.equal([['Bob', 30]]);
+    expect(board.players.map((player) => [player.author, player.coins])).to.deep.equal([['Bob', 15]]);
     expect((await TdcLeaderboard.run(['--author', 'bob@example.com'])).player?.rank).to.equal('Intern');
     const team = await TdcLeaderboard.run(['--team']);
     expect(team.players).to.deep.equal([]);
-    expect(team.team.coins).to.equal(30);
+    expect(team.team.coins).to.equal(15);
   });
 
   it('scan keeps the ledger byte for byte when nothing changed', async () => {

@@ -12,25 +12,28 @@ import {
 } from '../../src/ledger/ledger.js';
 import { loadProject } from '../../src/project/project.js';
 import { scan, toLedger } from '../../src/scan/engine.js';
-import { createProject, removeProject, writeSources } from '../helpers.js';
+import { createProject, removeProject, useFakeAnalyzer, writeSources } from '../helpers.js';
 
 const finding = (id: string, overrides: Partial<LedgerFinding> = {}): LedgerFinding => ({
   id,
-  rule: 'apex-system-debug',
+  rule: 'pmd:AvoidDebugStatements',
   file: 'force-app/main/default/classes/A.cls',
-  cost: 2,
+  cost: 5,
   hash: `hash-${id}`,
   snippet: `System.debug('${id}');`,
   ...overrides,
 });
 
 const ledger = (...findings: LedgerFinding[]): Ledger => ({
-  version: 1,
-  rules: { 'apex-system-debug': 2 },
+  version: 2,
+  engines: { core: '1.0.0', pmd: '1.0.0' },
+  rules: { 'pmd:AvoidDebugStatements': 5 },
   findings,
 });
 
 describe('ledger', () => {
+  useFakeAnalyzer();
+
   it('serializes one finding per line, sorted, and parses back', () => {
     const content = serializeLedger(ledger(finding('b'), finding('a')));
     expect(content.split('\n').filter((line) => line.includes('"id"'))).to.have.length(2);

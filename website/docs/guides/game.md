@@ -9,7 +9,7 @@ and badges. Everything comes from the history of the
 ## Earning TDC
 
 The author of a commit earns the TDC of the debt it paid, and loses the TDC of the debt it created. A commit that
-removes a query from a loop (30 TDC) and adds a `System.debug` (2 TDC) earns 28 TDC.
+removes a query from a loop (15 TDC) and adds a `System.debug` (5 TDC) earns 10 TDC.
 
 ```text
 $ sf tdc leaderboard
@@ -41,12 +41,11 @@ $ sf tdc leaderboard
 | Badge | Earned by |
 | --- | --- |
 | 🪙 First Payment | paying a first piece of debt |
-| 🎯 SOQL Slayer | taking 10 queries out of loops |
-| 🧲 DML Tamer | taking 10 DML statements out of loops |
-| 🏛️ API Archaeologist | upgrading the API version of 10 components |
-| ⚔️ Process Builder Slayer | migrating a Process Builder |
-| 👻 Aura Exorcist | replacing an Aura component |
-| 🛡️ Test Guardian | adding assertions to 10 tests |
+| 🎯 SOQL Slayer | taking 10 queries or DML statements out of Apex loops (`pmd:OperationWithLimitsInLoop`) |
+| 🧲 DML Tamer | taking 10 database operations out of flow loops (`flow:DbInLoop`) |
+| 🏛️ API Archaeologist | upgrading the API version of 10 components (`regex:AvoidOldSalesforceApiVersions`) |
+| 🔐 Security Guard | enforcing CRUD and FLS permissions in 10 places (`pmd:ApexCRUDViolation`) |
+| 🛡️ Test Guardian | adding assertions to 10 test classes (`pmd:ApexUnitTestClassShouldHaveAsserts`) |
 | 💰 Big Payer | paying 1,000 TDC in a single commit |
 | 🔥 Clean Streak | 5 commits in a row paying debt without creating any |
 

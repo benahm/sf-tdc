@@ -15,6 +15,14 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      # code-analyzer runs PMD on Java and the Flow engine on Python
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.3

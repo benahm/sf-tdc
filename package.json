@@ -4,10 +4,14 @@
   "version": "0.0.1-beta",
   "dependencies": {
     "@oclif/core": "^5.0.0",
+    "@salesforce/code-analyzer-core": "0.53.0",
+    "@salesforce/code-analyzer-eslint-engine": "0.47.0",
+    "@salesforce/code-analyzer-flow-engine": "0.41.0",
+    "@salesforce/code-analyzer-pmd-engine": "0.46.0",
+    "@salesforce/code-analyzer-regex-engine": "0.40.0",
     "@salesforce/core": "^9.1.11",
     "@salesforce/sf-plugins-core": "^13.0.4",
-    "@salesforce/source-deploy-retrieve": "^13.6.0",
-    "fast-xml-parser": "5.5.3"
+    "@salesforce/source-deploy-retrieve": "^13.6.0"
   },
   "devDependencies": {
     "@oclif/plugin-command-snapshot": "^6.0.2",
@@ -27,7 +31,7 @@
     "typescript": "^6.0.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "files": [
     "/lib",

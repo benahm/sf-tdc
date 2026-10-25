@@ -37,7 +37,8 @@ Fair play:
 
 - Debt found again in another file (a rename, a refactoring) is **moved**: neither paid nor created.
 - Deleting a whole file is not a payment, unless `game.rewardDeletedFiles` is `true`.
-- The first ledger is the **baseline**, and a commit that changes the rules or their costs **re-baselines** the debt:
+- The first ledger is the **baseline**, and a commit that changes the rules, their costs or the version of Code
+  Analyzer **re-baselines** the debt:
   nobody wins or loses TDC.
 - Merge commits are skipped: the commits of the merged branch already count. With a squash merge, the author of the
   pull request gets the TDC.
@@ -64,41 +65,40 @@ sf tdc check --base origin/main
 
 ## Rules
 
-| Rule | TDC | |
-| --- | ---: | --- |
-| `apex-soql-in-loop` | 30 | SOQL or SOSL query inside a loop |
-| `apex-dml-in-loop` | 30 | DML inside a loop |
-| `apex-hardcoded-id` | 15 | Hardcoded record ID |
-| `apex-empty-catch` | 10 | Empty catch block (a comment inside counts as a justification) |
-| `apex-system-debug` | 2 | `System.debug` left in the code |
-| `apex-todo-comment` | 5 | TODO, FIXME, HACK or XXX comment |
-| `apex-multiple-triggers` | 60 | Every trigger of an object but the first |
-| `apex-see-all-data` | 20 | Test with `SeeAllData=true` |
-| `apex-test-without-assert` | 15 | Test method without assertion |
-| `apex-class-without-test` | 60 | Class that neither a test class nor a trigger mentions |
-| `flow-process-builder` | 240 | Process Builder, to migrate to a flow |
-| `automation-workflow-rule` | 120 | Workflow rule, to migrate to a flow |
-| `flow-missing-fault-path` | 15 | Flow element that can fail without a fault path |
-| `ui-aura-component` | 480 | Aura component, to rewrite as LWC |
-| `ui-visualforce-page` | 240 | Visualforce page |
-| `metadata-old-api-version` | 10 | API version 9 or more versions behind `sourceApiVersion` (3 years) |
-| `metadata-field-without-description` | 5 | Custom field without a description |
+The debt is found by the rules of [Salesforce Code Analyzer](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/overview):
+PMD and CPD for Apex and Visualforce, the Flow engine, ESLint for Lightning components, and regex rules. sf-tdc embeds
+its engines with pinned versions, so that every developer and the CI find the same debt. It needs **Java 11+** (PMD)
+and **Python 3.10+** (Flow); the `sf code-analyzer` plugin itself is not needed.
 
-Disable or reprice a rule in `.tdc/config.json`:
+The `Recommended` rules are selected by default. A finding costs the TDC of its rule's severity:
+
+| Severity | TDC |
+| --- | ---: |
+| 1 Critical | 60 |
+| 2 High | 30 |
+| 3 Moderate | 15 |
+| 4 Low | 5 |
+| 5 Info | 2 |
+
+Select other rules, reprice a severity, or disable or reprice a rule (`engine:rule`) in `.tdc/config.json`:
 
 ```json
 {
   "dailyRate": 600,
   "currency": "EUR",
   "hoursPerDay": 7,
+  "ruleSelectors": ["Recommended"],
+  "severityCosts": { "Critical": 60, "High": 30, "Moderate": 15, "Low": 5, "Info": 2 },
   "rules": {
-    "apex-system-debug": { "enabled": false },
-    "ui-aura-component": { "cost": 960 }
+    "pmd:ApexDoc": { "enabled": false },
+    "pmd:OperationWithLimitsInLoop": { "cost": 30 }
   },
   "goal": { "debt": 20000, "date": "2027-03-31" },
   "game": { "rewardDeletedFiles": false }
 }
 ```
+
+The `code-analyzer.yml` of the project applies too: its rule overrides, ignored files and suppressions.
 
 The rating (A to E) divides the debt by the cost of writing the code (30 minutes a line), as SonarQube does.
 
@@ -112,6 +112,6 @@ The rating (A to E) divides the debt by the cost of writing the code (30 minutes
 | Debt Collector | 5,000 |
 | Legendary Collector | 15,000 |
 
-Badges: 🪙 First Payment · 🎯 SOQL Slayer · 🧲 DML Tamer · 🏛️ API Archaeologist · ⚔️ Process Builder Slayer ·
-👻 Aura Exorcist · 🛡️ Test Guardian · 💰 Big Payer (1,000 TDC in a commit) · 🔥 Clean Streak (5 commits in a row
+Badges: 🪙 First Payment · 🎯 SOQL Slayer · 🧲 DML Tamer · 🏛️ API Archaeologist · 🔐 Security Guard ·
+🛡️ Test Guardian · 💰 Big Payer (1,000 TDC in a commit) · 🔥 Clean Streak (5 commits in a row
 paying debt without creating any).

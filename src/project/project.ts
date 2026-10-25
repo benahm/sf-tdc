@@ -2,6 +2,7 @@ import { existsSync, realpathSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import type { Severity } from '../scan/code-analyzer.js';
 import { gitRoot } from './git.js';
 
 export const TDC_DIR = '.tdc';
@@ -23,8 +24,10 @@ export type Goal = {
 export type TdcConfig = {
   /** Folders to scan, relative to the project root. Defaults to the packageDirectories of sfdx-project.json. */
   sourceDirs?: string[];
-  /** Metadata older than this API version is debt. Defaults to sourceApiVersion minus 9 (3 years of releases). */
-  minApiVersion?: number;
+  /** Rule selectors of code-analyzer: engines, tags, severities or `engine:rule`, combined with a colon. */
+  ruleSelectors: string[];
+  /** Cost of a finding, in TDC, by severity of its rule. A rule of `rules` can have its own cost. */
+  severityCosts: Record<Severity, number>;
   /** Cost of a day of work, to price the debt. */
   dailyRate: number;
   currency: string;
@@ -41,6 +44,8 @@ export const DEFAULT_CONFIG: TdcConfig = {
   dailyRate: 600,
   currency: 'EUR',
   hoursPerDay: 7,
+  ruleSelectors: ['Recommended'],
+  severityCosts: { Critical: 60, High: 30, Moderate: 15, Low: 5, Info: 2 },
   rules: {},
   game: { rewardDeletedFiles: false },
 };
@@ -54,13 +59,10 @@ export type Project = {
   configFile: string;
   ledgerFile: string;
   sourceDirs: string[];
-  sourceApiVersion?: number;
-  minApiVersion: number;
 };
 
 type SfdxProjectJson = {
   packageDirectories?: Array<{ path?: string }>;
-  sourceApiVersion?: string;
 };
 
 const findUp = (start: string, file: string): string | undefined => {
@@ -100,11 +102,11 @@ export const loadProject = async (cwd: string, sourceDirs?: string[]): Promise<P
   const config: TdcConfig = {
     ...DEFAULT_CONFIG,
     ...stored,
+    severityCosts: { ...DEFAULT_CONFIG.severityCosts, ...stored.severityCosts },
     rules: { ...stored.rules },
     game: { ...DEFAULT_CONFIG.game, ...stored.game },
   };
 
-  const sourceApiVersion = sfdxProject.sourceApiVersion ? Number(sfdxProject.sourceApiVersion) : undefined;
   const packageDirs = (sfdxProject.packageDirectories ?? []).flatMap((dir) => (dir.path ? [dir.path] : []));
   const dirs = sourceDirs?.length ? sourceDirs : config.sourceDirs?.length ? config.sourceDirs : packageDirs;
 
@@ -115,8 +117,6 @@ export const loadProject = async (cwd: string, sourceDirs?: string[]): Promise<P
     configFile,
     ledgerFile: path.join(root, TDC_DIR, LEDGER_FILE),
     sourceDirs: (dirs.length ? dirs : ['force-app']).map((dir) => path.resolve(root, dir)),
-    sourceApiVersion,
-    minApiVersion: config.minApiVersion ?? (sourceApiVersion ? Math.floor(sourceApiVersion) - 9 : 50),
   };
 };
 

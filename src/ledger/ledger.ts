@@ -14,13 +14,18 @@ export type LedgerFinding = {
 };
 
 export type Ledger = {
-  version: 1;
+  version: 2;
+  /**
+   * Version of code-analyzer and of each engine when the ledger was written: a new version can find other violations
+   * in the same code, so a change re-baselines the debt instead of scoring it.
+   */
+  engines: Record<string, string>;
   /** Cost of each enabled rule when the ledger was written: a change re-baselines the debt instead of scoring it. */
   rules: Record<string, number>;
   findings: LedgerFinding[];
 };
 
-export const EMPTY_LEDGER: Ledger = { version: 1, rules: {}, findings: [] };
+export const EMPTY_LEDGER: Ledger = { version: 2, engines: {}, rules: {}, findings: [] };
 
 export const totalCost = (findings: Array<{ cost: number }>): number =>
   findings.reduce((sum, finding) => sum + finding.cost, 0);
@@ -30,20 +35,22 @@ export const totalCost = (findings: Array<{ cost: number }>): number =>
  * branches only conflict when they change the same findings.
  */
 export const serializeLedger = (ledger: Ledger): string => {
-  const rules = Object.keys(ledger.rules)
-    .sort()
-    .map((rule) => `    ${JSON.stringify(rule)}: ${ledger.rules[rule]}`);
+  const entries = (record: Record<string, string | number>): string[] =>
+    Object.keys(record)
+      .sort()
+      .map((key) => `    ${JSON.stringify(key)}: ${JSON.stringify(record[key])}`);
   const findings = [...ledger.findings]
     .sort((a, b) => a.file.localeCompare(b.file) || a.rule.localeCompare(b.rule) || a.id.localeCompare(b.id))
     .map(({ id, rule, file, cost, hash, snippet }) => `    ${JSON.stringify({ id, rule, file, cost, hash, snippet })}`);
   const block = (lines: string[], open: string, close: string): string =>
     lines.length ? `${open}\n${lines.join(',\n')}\n  ${close}` : `${open}${close}`;
-  return `{\n  "version": 1,\n  "rules": ${block(rules, '{', '}')},\n  "findings": ${block(findings, '[', ']')}\n}\n`;
+  return `{\n  "version": 2,\n  "engines": ${block(entries(ledger.engines), '{', '}')},\n  "rules": ${block(entries(ledger.rules), '{', '}')},\n  "findings": ${block(findings, '[', ']')}\n}\n`;
 };
 
+/** A version 1 ledger, from the rules of sf-tdc, parses without engines: its rules differ from any version 2 ledger. */
 export const parseLedger = (content: string): Ledger => {
   const ledger = JSON.parse(content) as Partial<Ledger>;
-  return { version: 1, rules: ledger.rules ?? {}, findings: ledger.findings ?? [] };
+  return { version: 2, engines: ledger.engines ?? {}, rules: ledger.rules ?? {}, findings: ledger.findings ?? [] };
 };
 
 export const readLedger = async (file: string): Promise<Ledger | undefined> => {
@@ -60,10 +67,14 @@ export const writeLedger = async (file: string, ledger: Ledger): Promise<void> =
   await writeFile(file, serializeLedger(ledger));
 };
 
-export const sameRules = (a: Ledger, b: Ledger): boolean => {
-  const keys = Object.keys(a.rules);
-  return keys.length === Object.keys(b.rules).length && keys.every((rule) => a.rules[rule] === b.rules[rule]);
+const sameRecord = (a: Record<string, unknown>, b: Record<string, unknown>): boolean => {
+  const keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key]);
 };
+
+/** Same rules, costs and engine versions: the changes between the two ledgers are the work of the commits. */
+export const sameRules = (a: Ledger, b: Ledger): boolean =>
+  sameRecord(a.rules, b.rules) && sameRecord(a.engines, b.engines);
 
 export type LedgerChanges = {
   /** Debt that disappeared while its file still exists. */

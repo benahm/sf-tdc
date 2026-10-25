@@ -8,7 +8,8 @@ title: CI setup
 - with `--base <ref>`, the debt grew since the ledger of that ref: paying more than you create passes;
 - with `--max-debt <TDC>`, the debt is above the limit.
 
-It needs the history of the base branch (`fetch-depth: 0`), and no org.
+It needs the history of the base branch (`fetch-depth: 0`), Java and Python for [the rules](../rules.md), and no
+org.
 
 ## GitHub Actions
 
@@ -29,6 +30,14 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      # Code Analyzer runs PMD on Java and the Flow engine on Python
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
       - run: npm install --global @salesforce/cli
       - run: |
           mkdir -p ~/.config/sf
