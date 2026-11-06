@@ -92,8 +92,31 @@ describe('dashboard', () => {
     await TdcScan.run([]);
     commitAll(root, 'Alice', 'chore: reprice', '2026-10-03T10:00:00Z');
     const result = await dashboardData(await loadProject(root));
-    expect(result.history[2]).to.include({ kind: 'rules-changed', paid: 0, created: 0 });
+    expect(result.history[2]).to.include({ kind: 'rules-changed', paid: 0, created: 0, coins: 0 });
     expect(result.forecast).to.equal(undefined);
+  });
+
+  it('ranks the collectors without their emails or the snippets of their commits', async () => {
+    commitAll(root, 'Alice', 'chore: baseline', '2026-10-01T10:00:00Z');
+    await writeSources(root, { 'classes/AccountService.cls': SOURCE.replace("System.debug('test');", '') });
+    await TdcScan.run([]);
+    commitAll(root, 'Bob', 'fix: debug', '2026-10-02T10:00:00Z');
+    const data = await dashboardData(await loadProject(root));
+    expect(data.players).to.have.length(1);
+    expect(data.players[0]).to.include({ author: 'Bob', coins: 5, paid: 5, rank: 'Intern' });
+    expect(data.players[0].badges).to.include('first-payment');
+    expect(data.badges.map((badge) => badge.id)).to.include('first-payment');
+    expect(data.history[1]).to.include({ coins: 5 });
+    expect(data.history[1].paidFindings[0]).to.have.all.keys('id', 'rule', 'file', 'cost');
+    expect(JSON.stringify(data.players)).not.to.include('@');
+  });
+
+  it('shows the debt that is not committed yet', async () => {
+    commitAll(root, 'Alice', 'chore: baseline', '2026-10-01T10:00:00Z');
+    await writeSources(root, { 'classes/AccountService.cls': SOURCE.replace("System.debug('test');", '') });
+    await TdcScan.run([]);
+    const data = await dashboardData(await loadProject(root));
+    expect(data).to.include({ debt: 0, committedDebt: 5 });
   });
 
   it('keeps untrusted code and commit strings inside the JSON data block', async () => {

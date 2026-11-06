@@ -31,9 +31,15 @@ Generating or opening a report never runs analyzers or prompt verifiers, updates
 
 ## Views
 
-- **Overview**: measured debt, estimated workdays and amount, repayments and additions over a selected period, highest-balance files, next corrections and the configured objective.
+The dashboard reads like a bank statement for the technical debt.
+
+- **Statement of account**: the balance due in TDC, in workdays and at your daily rate; the debt of the ledger on disk that is not committed yet; the date the debt is repaid at the committed pace, with a stamp (*On track*, *Behind*, *Overdue*, *Repaying*, *Accruing* or *Paid in full*).
+- **Overview**: credits (repaid), debits (new debt), net change and coins collected over a selected period; the repayment trajectory; *collection notices* for the files that owe the most; *bounties* for the most expensive debts, worth as many coins once repaid; the progress toward the configured objective, with milestones.
 - **Debts**: search by file, problem, rule or ID; filter by source and engine; inspect snippets and copy a verification command. Declared debt has a separate total and remains outside the ledger and coin calculations.
-- **Activity**: inspect each commit's repaid and introduced findings, moved findings and debt removed with whole files.
+- **Collectors**: the leaderboard of `sf tdc leaderboard` with a podium, the progress of each collector toward the next rank, and the badges earned or still locked. Authors appear by name only, without email.
+- **Statement**: each committed ledger as a statement line with its debit, credit, running balance and coins. Baselines and rule changes appear as revaluations and score no coins.
+
+When the latest committed ledger repaid more debt than it created, a few coins rain on the page. Animations are disabled when the system asks for reduced motion.
 
 Rule, cost and engine changes interrupt the chart and start a new measurement baseline. They do not count as repayments or additions. The committed trend uses only the latest baseline and needs at least two commits. File deletions lower debt but remain separate from corrected findings. All costs and projections are estimates.
 

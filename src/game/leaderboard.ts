@@ -120,7 +120,10 @@ const BADGES: BadgeRule[] = [
   },
 ];
 
-export const rankOf = (coins: number): Pick<Player, 'rank' | 'nextRank'> => {
+/** Every badge that can be earned, in display order. */
+export const BADGE_CATALOG: Badge[] = BADGES.map(({ id, icon, name, description }) => ({ id, icon, name, description }));
+
+export const rankOf =(coins: number): Pick<Player, 'rank' | 'nextRank'> => {
   const index = RANKS.findLastIndex((rank) => coins >= rank.minCoins);
   const next = RANKS[index + 1];
   if (!next) return { rank: RANKS[index].name };

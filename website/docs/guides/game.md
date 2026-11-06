@@ -26,6 +26,9 @@ $ sf tdc leaderboard
 - `--me` or `--author <name or email>` shows a card: rank, progress to the next rank, badges and latest payments.
 - `--team` shows the total of the team without naming anyone, for teams that prefer it.
 
+The [dashboard](./dashboard.md) shows the same leaderboard in its **Collectors** view: a podium, the progress of each
+collector toward the next rank, and the badges earned or still locked.
+
 ## Ranks
 
 | Rank | TDC earned |
