@@ -51,6 +51,7 @@ Fair play:
 | --- | --- |
 | `sf tdc init` | Creates `.tdc/config.json`: `--daily-rate`, `--currency`, `--goal-debt` and `--goal-date`. |
 | `sf tdc scan` | Finds and prices the debt, writes the ledger. `--dry-run`, `--details` (every finding with its line), `--report-file report.md`, `-d` to scan other folders. |
+| `sf tdc dashboard` | Opens an offline dashboard from the ledger and git history: debt evolution, findings and commit activity. `--output ./report.html` exports without opening a browser. |
 | `sf tdc history` | The debt commit by commit, and when it will be paid off at this pace. `--since`, `--limit`. |
 | `sf tdc leaderboard` | Developers ranked by the TDC they earned. `--me` or `--author` for a card (rank, badges, latest payments), `--team` for the team total without names, `--since` for a sprint. |
 | `sf tdc check` | CI gate: fails when the ledger is out of date, when the debt grew since `--base <ref>`, or when it is above `--max-debt`. |

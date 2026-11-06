@@ -14,6 +14,7 @@ const repoUrl = 'https://github.com/benahm/sf-tdc';
 const ORDER = [
   'tdc:init',
   'tdc:scan',
+  'tdc:dashboard',
   'tdc:history',
   'tdc:leaderboard',
   'tdc:check',

@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/TdcDashboardResult",
+  "definitions": {
+    "TdcDashboardResult": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "opened": {
+          "type": "boolean"
+        },
+        "debt": {
+          "type": "number"
+        },
+        "generatedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "file",
+        "opened",
+        "debt",
+        "generatedAt"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

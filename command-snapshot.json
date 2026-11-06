@@ -30,6 +30,18 @@
     },
     {
         "alias": [],
+        "command": "tdc:dashboard",
+        "flagAliases": [],
+        "flagChars": [],
+        "flags": [
+            "flags-dir",
+            "json",
+            "output"
+        ],
+        "plugin": "sf-tdc"
+    },
+    {
+        "alias": [],
         "command": "tdc:guide",
         "flagAliases": [],
         "flagChars": [],
