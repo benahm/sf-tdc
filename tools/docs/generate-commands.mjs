@@ -107,7 +107,7 @@ const renderCommand = (id, command, position) => {
   const flags = Object.values(command.flags)
     .filter((flag) => !flag.hidden && !GLOBAL_FLAGS.has(flag.name))
     .sort((a, b) => Number(Boolean(b.required)) - Number(Boolean(a.required)));
-  const source = `src/commands/${id.split(':').slice(1).join('/')}.ts`;
+  const source = `src/commands/${id.split(':').join('/')}.ts`;
 
   return [
     '---',
