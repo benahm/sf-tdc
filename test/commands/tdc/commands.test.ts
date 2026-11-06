@@ -8,7 +8,6 @@ import { expect } from 'chai';
 
 import TdcCheck from '../../../src/commands/tdc/check.js';
 import TdcInit from '../../../src/commands/tdc/init.js';
-import TdcLeaderboard from '../../../src/commands/tdc/leaderboard.js';
 import TdcScan from '../../../src/commands/tdc/scan.js';
 import { commitAll, createProject, gitInit, removeProject, useFakeAnalyzer, writeSources } from '../../helpers.js';
 
@@ -91,21 +90,6 @@ describe('tdc commands', () => {
     const grew = await TdcCheck.run(['--base', 'HEAD', '--max-debt', '10']);
     expect(grew.sinceBase).to.deep.equal({ base: 'HEAD', paid: 0, created: 5 });
     expect(grew.failures).to.have.length(2);
-  });
-
-  it('leaderboard ranks the authors, shows a card, and hides the names with --team', async () => {
-    await TdcScan.run([]);
-    commitAll(root, 'Alice', 'chore: first ledger', '2026-10-01T10:00:00Z');
-    await writeSources(root, { 'classes/AccountService.cls': LOOP.replace('{ update a; }', '{}') });
-    await TdcScan.run([]);
-    commitAll(root, 'Bob', 'fix: no DML in loop', '2026-10-02T10:00:00Z');
-
-    const board = await TdcLeaderboard.run([]);
-    expect(board.players.map((player) => [player.author, player.coins])).to.deep.equal([['Bob', 15]]);
-    expect((await TdcLeaderboard.run(['--author', 'bob@example.com'])).player?.rank).to.equal('Intern');
-    const team = await TdcLeaderboard.run(['--team']);
-    expect(team.players).to.deep.equal([]);
-    expect(team.team.coins).to.equal(15);
   });
 
   it('scan keeps the ledger byte for byte when nothing changed', async () => {

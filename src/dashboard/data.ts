@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 import { readDeclaredDebts } from '../debt/declared.js';
-import { BADGE_CATALOG, buildLeaderboard, RANKS, type Badge, type Player } from '../game/leaderboard.js';
+import { buildLeaderboard, RANKS, teamOf, type Player } from '../game/leaderboard.js';
 import { forecast, price, type Forecast, type Price } from '../game/score.js';
 import { readHistory, type CommitKind } from '../ledger/history.js';
 import { readLedger, totalCost, type LedgerFinding } from '../ledger/ledger.js';
@@ -24,11 +24,11 @@ export type DashboardFinding = {
 /** A finding of a commit, without its snippet: a large history must not make the report heavy. */
 export type DashboardChange = Pick<LedgerFinding, 'id' | 'rule' | 'file' | 'cost'>;
 
-/** A player of the leaderboard, without email or payments: the report is meant to be shared. */
+/** A player of the leaderboard, without email: the report is meant to be shared. */
 export type DashboardPlayer = Pick<
   Player,
   'author' | 'coins' | 'paid' | 'created' | 'deleted' | 'commits' | 'rank' | 'nextRank'
-> & { badges: string[] };
+>;
 
 export type DashboardData = {
   version: number;
@@ -45,13 +45,14 @@ export type DashboardData = {
   forecast?: Forecast;
   findings: DashboardFinding[];
   declared: DashboardFinding[];
+  /** One player named after the team when the leaderboard is "team". */
   players: DashboardPlayer[];
   ranks: Array<{ name: string; minCoins: number }>;
-  badges: Badge[];
   history: Array<{
     sha: string;
     date: string;
     subject: string;
+    /** Empty when the leaderboard is "team". */
     author: string;
     kind: CommitKind;
     debt: number;
@@ -91,6 +92,8 @@ export const dashboardData = async (project: Project): Promise<DashboardData> =>
   const baseline = events.findLastIndex((event) => event.kind !== 'scored');
   const comparable = events.slice(Math.max(baseline, 0));
   const debt = totalCost(ledger.findings);
+  const team = project.config.game.leaderboard === 'team';
+  const players = buildLeaderboard(events);
   return {
     version: 2,
     project: path.basename(project.root),
@@ -124,7 +127,7 @@ export const dashboardData = async (project: Project): Promise<DashboardData> =>
         cost: item.cost,
         problem: `${item.title}: ${item.description}`,
       })),
-    players: buildLeaderboard(events).map((player) => ({
+    players: (team ? (players.length ? [teamOf(players, 'The team')] : []) : players).map((player) => ({
       author: player.author,
       coins: player.coins,
       paid: player.paid,
@@ -133,15 +136,13 @@ export const dashboardData = async (project: Project): Promise<DashboardData> =>
       commits: player.commits,
       rank: player.rank,
       nextRank: player.nextRank,
-      badges: player.badges.map((badge) => badge.id),
     })),
     ranks: RANKS.map((rank) => ({ name: rank.name, minCoins: Math.max(rank.minCoins, 0) })),
-    badges: BADGE_CATALOG,
     history: events.map((event) => ({
       sha: event.sha,
       date: event.date,
       subject: event.subject,
-      author: event.author,
+      author: team ? '' : event.author,
       kind: event.kind,
       debt: event.debt,
       coins: event.coins,

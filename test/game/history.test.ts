@@ -77,11 +77,6 @@ describe('history and leaderboard', () => {
       ['Bob', 30],
       ['Carol', -5],
     ]);
-    expect(players[0].badges.map((badge) => badge.id)).to.deep.equal(['first-payment']);
-    expect(players[0].payments.map((payment) => payment.rule)).to.deep.equal([
-      'pmd:OperationWithLimitsInLoop',
-      'pmd:OperationWithLimitsInLoop',
-    ]);
   });
 
   it('gives no coins for a rename, nor when the rules change', async () => {

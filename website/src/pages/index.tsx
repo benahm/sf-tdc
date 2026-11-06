@@ -42,7 +42,7 @@ const features: Feature[] = [
     title: 'A game for the team',
     description: (
       <>
-        Ranks, badges, a leaderboard per sprint, a goal and a payoff date. And a CI check so that the debt never
+        Ranks, a leaderboard in the dashboard, a goal and a payoff date. And a CI check so that the debt never
         grows.
       </>
     ),

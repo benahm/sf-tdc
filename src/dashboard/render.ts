@@ -240,19 +240,11 @@ export const renderDashboard = (data: DashboardData): string => {
                   <th scope="col" class="num">Repaid</th>
                   <th scope="col" class="num">New debt</th>
                   <th scope="col" class="num">Coins</th>
-                  <th scope="col">Badges</th>
                 </tr>
               </thead>
               <tbody id="playerrows"></tbody>
             </table>
           </div>
-          <div class="panelhead" style="margin-top: 30px">
-            <div>
-              <div class="eyebrow">Trophy cabinet</div>
-              <h2>Badges</h2>
-            </div>
-          </div>
-          <div class="gallery" id="gallery"></div>
         </section>
 
         <section id="activity" aria-label="Statement of committed ledgers" hidden>

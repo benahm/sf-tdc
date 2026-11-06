@@ -8,7 +8,7 @@ Generates a self-contained HTML report and opens it in your default browser. Wit
 
 Reads the ledger on disk and its git history without running the analyzers, updating the ledger or running declared-debt verifiers. Run sf tdc scan first to include your latest code changes.
 
-The dashboard reads like a bank statement: the balance due and the date it is repaid at the committed pace, the debt not committed yet, the files that owe the most, bounties for the most expensive debts, the collectors of the leaderboard with their ranks and badges, and each committed ledger as a statement line. It separates measured and declared debt, and marks rule or engine changes as new baselines. Reports contain source snippets and commit information: share them only where the project's code may be shared. Without --output, the report is stored in the system temporary directory.
+The dashboard reads like a bank statement: the balance due and the date it is repaid at the committed pace, the debt not committed yet, the files that owe the most, bounties for the most expensive debts, the collectors of the leaderboard with their ranks, and each committed ledger as a statement line. It separates measured and declared debt, and marks rule or engine changes as new baselines. Reports contain source snippets and commit information: share them only where the project's code may be shared. Without --output, the report is stored in the system temporary directory.
 
 # flags.output.summary
 

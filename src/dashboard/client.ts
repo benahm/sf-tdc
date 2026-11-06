@@ -41,11 +41,6 @@ const withCoin = (node) => {
   node.append(" ", coin());
   return node;
 };
-const badgeIcon = (b, className) => {
-  const span = el("span", b.icon === "🪙" ? undefined : b.icon, className);
-  if (b.icon === "🪙") span.append(coin());
-  return span;
-};
 const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const all = [...data.findings, ...data.declared];
 const measured = (f) => f.source === "code-analyzer";
@@ -492,7 +487,6 @@ $("nextpage").onclick = () => {
 renderRows();
 
 /* Collectors */
-const badgeById = new Map(data.badges.map((b) => [b.id, b]));
 (function collectors() {
   if (!data.players.length) {
     $("podium").append(
@@ -526,37 +520,14 @@ const badgeById = new Map(data.badges.map((b) => [b.id, b]));
       track.append(fill);
       rank.append(track, el("small", fmt(p.nextRank.coinsToGo) + " coins to " + p.nextRank.name));
     } else rank.append(el("small", "Top rank reached"));
-    const icons = el("td", undefined, "badgeicons");
-    p.badges.forEach((id) => {
-      const b = badgeById.get(id);
-      if (!b) return;
-      const s = badgeIcon(b);
-      s.title = b.name + " · " + b.description;
-      s.setAttribute("role", "img");
-      s.setAttribute("aria-label", b.name);
-      icons.append(s);
-    });
     row.append(
       who,
       rank,
       el("td", "−" + fmt(p.paid), "num paid"),
       el("td", "+" + fmt(p.created), "num created"),
-      el("td", signed(p.coins), "num number " + (p.coins < 0 ? "created" : "gold")),
-      icons
+      el("td", signed(p.coins), "num number " + (p.coins < 0 ? "created" : "gold"))
     );
     $("playerrows").append(row);
-  });
-  data.badges.forEach((b) => {
-    const holders = data.players.filter((p) => p.badges.includes(b.id)).length;
-    const card = el("div", undefined, "badge" + (holders ? "" : " locked"));
-    const copy = el("div");
-    copy.append(
-      el("strong", b.name),
-      el("p", b.description),
-      el("p", holders ? "Earned by " + holders + (holders === 1 ? " collector" : " collectors") : "Locked")
-    );
-    card.append(badgeIcon(b, "icon"), copy);
-    $("gallery").append(card);
   });
   data.ranks.forEach((r) => $("ladder").append(withCoin(el("span", r.name + " · " + fmt(r.minCoins), "tag"))));
 })();
@@ -568,7 +539,7 @@ function showCommit(e) {
   body.replaceChildren();
   body.append(
     el("p", e.sha, "mono"),
-    el("p", e.author + " · " + date(e.date)),
+    el("p", (e.author ? e.author + " · " : "") + date(e.date)),
     el("p", "Balance after commit: " + fmt(e.debt) + " TDC")
   );
   if (e.kind !== "scored")
@@ -608,7 +579,7 @@ function renderEvents() {
         b = el("button", e.subject);
       b.type = "button";
       b.onclick = () => showCommit(e);
-      info.append(b, el("br"), el("small", e.author + " · " + e.sha.slice(0, 7)));
+      info.append(b, el("br"), el("small", (e.author ? e.author + " · " : "") + e.sha.slice(0, 7)));
       if (!scored)
         info.append(
           el(

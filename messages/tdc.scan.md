@@ -6,7 +6,7 @@ Find the technical debt of the project and price it in TDC.
 
 Runs the rules on the source folders (the packageDirectories of sfdx-project.json by default, minus the files excluded by .forceignore) and prices every finding in TDC, Technical Debt Coins: 1 TDC is a minute of work to fix it. The total is also given in man-days and in money, with the daily rate of .tdc/config.json.
 
-The findings are written to .tdc/ledger.json, one per line and without line numbers, so that editing code around a debt changes nothing. Commit the ledger with your changes: comparing it from commit to commit tells who paid the debt ("sf tdc history", "sf tdc leaderboard").
+The findings are written to .tdc/ledger.json, one per line and without line numbers, so that editing code around a debt changes nothing. Commit the ledger with your changes: comparing it from commit to commit tells who paid the debt ("sf tdc history", "sf tdc dashboard").
 
 # flags.source-dir.summary
 

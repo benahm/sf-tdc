@@ -82,25 +82,6 @@
     },
     {
         "alias": [],
-        "command": "tdc:leaderboard",
-        "flagAliases": [],
-        "flagChars": [
-            "a"
-        ],
-        "flags": [
-            "author",
-            "flags-dir",
-            "json",
-            "limit",
-            "me",
-            "payments",
-            "since",
-            "team"
-        ],
-        "plugin": "sf-tdc"
-    },
-    {
-        "alias": [],
         "command": "tdc:next",
         "flagAliases": [],
         "flagChars": [

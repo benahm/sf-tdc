@@ -30,8 +30,8 @@ reads. The Technical Debt Collector answers three questions instead:
 
 - **How much do we owe?** One number, in time and in money, that a project manager understands.
 - **Is it getting better?** The history of the debt, commit by commit, and the date it will be paid off at this pace.
-- **Who is paying it back?** Every commit that fixes debt earns its TDC to its author. Ranks, badges and a leaderboard
-  make it visible, and fun.
+- **Who is paying it back?** Every commit that fixes debt earns its TDC to its author. Ranks and a leaderboard in the
+  dashboard make it visible, and fun.
 
 ## What is inside
 
@@ -40,7 +40,6 @@ reads. The Technical Debt Collector answers three questions instead:
 | [`sf tdc init`](./commands/tdc-init.md) | Sets up the project: daily rate, rules, goal. |
 | [`sf tdc scan`](./commands/tdc-scan.md) | Finds and prices the debt, writes the ledger to commit. |
 | [`sf tdc history`](./commands/tdc-history.md) | The debt commit by commit, and the forecast payoff date. |
-| [`sf tdc leaderboard`](./commands/tdc-leaderboard.md) | Developers ranked by the TDC they earned: ranks, badges. |
 | [`sf tdc check`](./commands/tdc-check.md) | CI gate: the ledger is up to date, and the debt doesn't grow. |
 
 ## Principles

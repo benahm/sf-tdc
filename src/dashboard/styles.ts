@@ -322,21 +322,6 @@ small, .muted { color: var(--muted); }
 .players td { vertical-align: middle; }
 .rankbar { min-width: 140px; }
 .rankbar .track { margin: 4px 0 2px; height: 6px; }
-.badgeicons { font-size: 18px; letter-spacing: 2px; }
-.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
-.badge {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--raised);
-}
-.badge .icon { font-size: 26px; }
-.badge.locked .icon { filter: grayscale(1); opacity: 0.4; }
-.badge.locked strong { color: var(--muted); }
-.badge p { font-size: 12px; color: var(--muted); }
 .ladder { display: flex; gap: 8px; flex-wrap: wrap; }
 .ladder .tag { padding: 6px 10px; }
 

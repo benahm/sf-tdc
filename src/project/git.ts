@@ -29,11 +29,3 @@ export const showFile = async (cwd: string, ref: string, gitPath: string): Promi
     return undefined;
   }
 };
-
-export const userEmail = async (cwd: string): Promise<string | undefined> => {
-  try {
-    return (await git(cwd, ['config', 'user.email'])).trim() || undefined;
-  } catch {
-    return undefined;
-  }
-};

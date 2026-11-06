@@ -1,4 +1,4 @@
-import { payments, type CommitEvent } from '../ledger/history.js';
+import type { CommitEvent } from '../ledger/history.js';
 import { totalCost } from '../ledger/ledger.js';
 
 export type Rank = { name: string; minCoins: number };
@@ -11,20 +11,8 @@ export const RANKS: Rank[] = [
   { name: 'Legendary Collector', minCoins: 15_000 },
 ];
 
-export type Badge = { id: string; icon: string; name: string; description: string };
-
-export type Payment = {
-  sha: string;
-  date: string;
-  rule: string;
-  file: string;
-  cost: number;
-  snippet: string;
-};
-
 export type Player = {
   author: string;
-  email: string;
   coins: number;
   /** TDC paid, created, and removed with deleted files. */
   paid: number;
@@ -35,95 +23,9 @@ export type Player = {
   rank: string;
   /** Progress from the current rank to the next one, between 0 and 1. */
   nextRank?: { name: string; coinsToGo: number; progress: number };
-  badges: Badge[];
-  /** Most recent first. */
-  payments: Payment[];
 };
 
-type BadgeRule = Badge & {
-  earned(events: CommitEvent[], paidByRule: Map<string, number>): boolean;
-};
-
-const paidAtLeast =
-  (rule: string, count: number) =>
-  (_events: CommitEvent[], paidByRule: Map<string, number>): boolean =>
-    (paidByRule.get(rule) ?? 0) >= count;
-
-/** `length` scored commits in a row that paid debt and created none. */
-const streak =
-  (length: number) =>
-  (events: CommitEvent[]): boolean => {
-    let current = 0;
-    for (const event of events) {
-      current = event.paid.length > 0 && event.created.length === 0 ? current + 1 : 0;
-      if (current >= length) return true;
-    }
-    return false;
-  };
-
-const BADGES: BadgeRule[] = [
-  {
-    id: 'first-payment',
-    icon: '🪙',
-    name: 'First Payment',
-    description: 'Paid a first piece of debt.',
-    earned: (events) => events.some((event) => event.paid.length > 0),
-  },
-  {
-    id: 'soql-slayer',
-    icon: '🎯',
-    name: 'SOQL Slayer',
-    description: 'Took 10 queries or DML statements out of Apex loops.',
-    earned: paidAtLeast('pmd:OperationWithLimitsInLoop', 10),
-  },
-  {
-    id: 'dml-tamer',
-    icon: '🧲',
-    name: 'DML Tamer',
-    description: 'Took 10 database operations out of flow loops.',
-    earned: paidAtLeast('flow:DbInLoop', 10),
-  },
-  {
-    id: 'api-archaeologist',
-    icon: '🏛️',
-    name: 'API Archaeologist',
-    description: 'Upgraded the API version of 10 components.',
-    earned: paidAtLeast('regex:AvoidOldSalesforceApiVersions', 10),
-  },
-  {
-    id: 'security-guard',
-    icon: '🔐',
-    name: 'Security Guard',
-    description: 'Enforced CRUD and FLS permissions in 10 places.',
-    earned: paidAtLeast('pmd:ApexCRUDViolation', 10),
-  },
-  {
-    id: 'test-guardian',
-    icon: '🛡️',
-    name: 'Test Guardian',
-    description: 'Added assertions to 10 test classes.',
-    earned: paidAtLeast('pmd:ApexUnitTestClassShouldHaveAsserts', 10),
-  },
-  {
-    id: 'big-payer',
-    icon: '💰',
-    name: 'Big Payer',
-    description: 'Paid 1,000 TDC in a single commit.',
-    earned: (events) => events.some((event) => totalCost(event.paid) >= 1000),
-  },
-  {
-    id: 'clean-streak',
-    icon: '🔥',
-    name: 'Clean Streak',
-    description: '5 commits in a row paying debt without creating any.',
-    earned: streak(5),
-  },
-];
-
-/** Every badge that can be earned, in display order. */
-export const BADGE_CATALOG: Badge[] = BADGES.map(({ id, icon, name, description }) => ({ id, icon, name, description }));
-
-export const rankOf =(coins: number): Pick<Player, 'rank' | 'nextRank'> => {
+export const rankOf = (coins: number): Pick<Player, 'rank' | 'nextRank'> => {
   const index = RANKS.findLastIndex((rank) => coins >= rank.minCoins);
   const next = RANKS[index + 1];
   if (!next) return { rank: RANKS[index].name };
@@ -146,14 +48,9 @@ export const buildLeaderboard = (events: CommitEvent[]): Player[] => {
   return [...byEmail.values()]
     .map((authorEvents): Player => {
       const latest = authorEvents[authorEvents.length - 1];
-      const paidByRule = new Map<string, number>();
-      for (const finding of authorEvents.flatMap((event) => event.paid)) {
-        paidByRule.set(finding.rule, (paidByRule.get(finding.rule) ?? 0) + 1);
-      }
       const coins = authorEvents.reduce((sum, event) => sum + event.coins, 0);
       return {
         author: latest.author,
-        email: latest.email,
         coins,
         paid: totalCost(authorEvents.flatMap((event) => event.paid)),
         created: totalCost(authorEvents.flatMap((event) => event.created)),
@@ -161,26 +58,23 @@ export const buildLeaderboard = (events: CommitEvent[]): Player[] => {
         commits: authorEvents.filter((event) => event.paid.length + event.created.length + event.deleted.length > 0)
           .length,
         ...rankOf(coins),
-        badges: BADGES.filter((badge) => badge.earned(authorEvents, paidByRule)).map(
-          ({ id, icon, name, description }) => ({ id, icon, name, description })
-        ),
-        payments: authorEvents
-          .flatMap(payments)
-          .reverse()
-          .map(({ sha, date, rule, file, cost, snippet }) => ({
-            sha,
-            date,
-            rule,
-            file,
-            cost,
-            snippet,
-          })),
       };
     })
     .sort((a, b) => b.coins - a.coins || a.author.localeCompare(b.author));
 };
 
-export const matchesAuthor = (player: Player, query: string): boolean => {
-  const lower = query.toLowerCase();
-  return player.email.toLowerCase() === lower || player.author.toLowerCase() === lower;
+/** Every player summed into one, for teams that keep names out of the game. */
+export const teamOf = (players: Player[], name: string): Player => {
+  const sum = (key: 'coins' | 'paid' | 'created' | 'deleted' | 'commits'): number =>
+    players.reduce((total, player) => total + player[key], 0);
+  const coins = sum('coins');
+  return {
+    author: name,
+    coins,
+    paid: sum('paid'),
+    created: sum('created'),
+    deleted: sum('deleted'),
+    commits: sum('commits'),
+    ...rankOf(coins),
+  };
 };

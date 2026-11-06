@@ -16,7 +16,6 @@ const ORDER = [
   'tdc:scan',
   'tdc:dashboard',
   'tdc:history',
-  'tdc:leaderboard',
   'tdc:check',
   'tdc:guide',
   'tdc:next',

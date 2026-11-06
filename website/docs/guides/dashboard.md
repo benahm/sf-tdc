@@ -36,7 +36,7 @@ The dashboard reads like a bank statement for the technical debt.
 - **Statement of account**: the balance due in TDC, in workdays and at your daily rate; the debt of the ledger on disk that is not committed yet; the date the debt is repaid at the committed pace, with a stamp (*On track*, *Behind*, *Overdue*, *Repaying*, *Accruing* or *Paid in full*).
 - **Overview**: credits (repaid), debits (new debt), net change and coins collected over a selected period; the repayment trajectory; *collection notices* for the files that owe the most; *bounties* for the most expensive debts, worth as many coins once repaid; the progress toward the configured objective, with milestones.
 - **Debts**: search by file, problem, rule or ID; filter by source and engine; inspect snippets and copy a verification command. Declared debt has a separate total and remains outside the ledger and coin calculations.
-- **Collectors**: the leaderboard of `sf tdc leaderboard` with a podium, the progress of each collector toward the next rank, and the badges earned or still locked. Authors appear by name only, without email.
+- **Collectors**: the authors ranked by the TDC they earned, with a podium and the progress of each collector toward the next rank. Authors appear by name only, without email. With `game.leaderboard` set to `team` in the [configuration](./configuration.md), the view shows the team total and the report holds no author name.
 - **Statement**: each committed ledger as a statement line with its debit, credit, running balance and coins. Baselines and rule changes appear as revaluations and score no coins.
 
 When the latest committed ledger repaid more debt than it created, a few coins rain on the page. Animations are disabled when the system asks for reduced motion.

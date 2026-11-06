@@ -89,10 +89,19 @@
             "rewardDeletedFiles": {
               "type": "boolean",
               "description": "Whether deleting a whole file earns the coins of its debt."
+            },
+            "leaderboard": {
+              "type": "string",
+              "enum": [
+                "named",
+                "team"
+              ],
+              "description": "\"named\" ranks each author in the dashboard; \"team\" sums them into one, and leaves names out of the report."
             }
           },
           "required": [
-            "rewardDeletedFiles"
+            "rewardDeletedFiles",
+            "leaderboard"
           ],
           "additionalProperties": false
         },

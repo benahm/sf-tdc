@@ -3,8 +3,8 @@
 > **Beta.** Please [report issues](https://github.com/benahm/sf-tdc/issues).
 
 A [Salesforce CLI](https://developer.salesforce.com/tools/salesforcecli) plugin that **prices the technical debt** of
-a Salesforce project, **tracks in git who pays it back**, and turns it into a game: ranks, badges and a
-leaderboard.
+a Salesforce project, **tracks in git who pays it back**, and turns it into a game: ranks and a
+leaderboard in its dashboard.
 
 The debt is counted in **TDC, Technical Debt Coins**: 1 TDC is a minute of work to fix a finding. Paying 30 TDC of
 debt earns you 30 TDC. It is also given in man-days and in money,
@@ -51,9 +51,8 @@ Fair play:
 | --- | --- |
 | `sf tdc init` | Creates `.tdc/config.json`: `--daily-rate`, `--currency`, `--goal-debt` and `--goal-date`. |
 | `sf tdc scan` | Finds and prices the debt, writes the ledger. `--dry-run`, `--details` (every finding with its line), `--report-file report.md`, `-d` to scan other folders. |
-| `sf tdc dashboard` | Opens an offline dashboard from the ledger and git history, laid out as a bank statement: balance due and payoff date, debt evolution, bounties, collectors and their badges, commit by commit. `--output ./report.html` exports without opening a browser. |
+| `sf tdc dashboard` | Opens an offline dashboard from the ledger and git history, laid out as a bank statement: balance due and payoff date, debt evolution, bounties, collectors and their ranks (or the team total with `game.leaderboard: "team"`), commit by commit. `--output ./report.html` exports without opening a browser. |
 | `sf tdc history` | The debt commit by commit, and when it will be paid off at this pace. `--since`, `--limit`. |
-| `sf tdc leaderboard` | Developers ranked by the TDC they earned. `--me` or `--author` for a card (rank, badges, latest payments), `--team` for the team total without names, `--since` for a sprint. |
 | `sf tdc check` | CI gate: fails when the ledger is out of date, when the debt grew since `--base <ref>`, or when it is above `--max-debt`. |
 
 Every command supports `--json`; its format is pinned by [`schemas/`](schemas).
@@ -107,7 +106,7 @@ Select other rules, reprice a severity, or disable or reprice a rule (`engine:ru
     "pmd:OperationWithLimitsInLoop": { "cost": 30 }
   },
   "goal": { "debt": 20000, "date": "2027-03-31" },
-  "game": { "rewardDeletedFiles": false }
+  "game": { "rewardDeletedFiles": false, "leaderboard": "named" }
 }
 ```
 
@@ -124,7 +123,3 @@ The rating (A to E) divides the debt by the cost of writing the code (30 minutes
 | Bailiff | 1,500 |
 | Debt Collector | 5,000 |
 | Legendary Collector | 15,000 |
-
-Badges: 🪙 First Payment · 🎯 SOQL Slayer · 🧲 DML Tamer · 🏛️ API Archaeologist · 🔐 Security Guard ·
-🛡️ Test Guardian · 💰 Big Payer (1,000 TDC in a commit) · 🔥 Clean Streak (5 commits in a row
-paying debt without creating any).

@@ -16,7 +16,7 @@ title: Configuration
     "pmd:OperationWithLimitsInLoop": { "cost": 30 }
   },
   "goal": { "debt": 20000, "date": "2027-03-31" },
-  "game": { "rewardDeletedFiles": false }
+  "game": { "rewardDeletedFiles": false, "leaderboard": "named" }
 }
 ```
 
@@ -31,6 +31,7 @@ title: Configuration
 | `rules.<engine:rule>.cost` | its severity's | Cost of a finding of this rule, in TDC. |
 | `goal` | none | Debt to reach (`debt`, in TDC) by a date (`date`, `YYYY-MM-DD`), shown by `sf tdc history`. |
 | `game.rewardDeletedFiles` | `false` | Whether deleting a whole file earns the TDC of its debt. |
+| `game.leaderboard` | `named` | `team` sums the collectors of the [dashboard](./dashboard.md) into the team, and leaves the names of the authors out of the report. |
 | `sourceDirs` | `packageDirectories` | Folders to scan, relative to the project root. |
 | `verifier.command` | none | Shell command that answers the prompt verifiers of [declared debt](./ai-agents.md#declare-debt), the prompt on its standard input: `claude -p`, `codex exec -`... |
 | `verifier.runs` | `3` | Times a prompt verifier is asked: every answer must agree. |

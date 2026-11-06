@@ -104,11 +104,21 @@ describe('dashboard', () => {
     const data = await dashboardData(await loadProject(root));
     expect(data.players).to.have.length(1);
     expect(data.players[0]).to.include({ author: 'Bob', coins: 5, paid: 5, rank: 'Intern' });
-    expect(data.players[0].badges).to.include('first-payment');
-    expect(data.badges.map((badge) => badge.id)).to.include('first-payment');
     expect(data.history[1]).to.include({ coins: 5 });
     expect(data.history[1].paidFindings[0]).to.have.all.keys('id', 'rule', 'file', 'cost');
     expect(JSON.stringify(data.players)).not.to.include('@');
+  });
+
+  it('sums the collectors into the team and leaves names out when the leaderboard is "team"', async () => {
+    commitAll(root, 'Alice', 'chore: baseline', '2026-10-01T10:00:00Z');
+    await writeSources(root, { 'classes/AccountService.cls': SOURCE.replace("System.debug('test');", '') });
+    await TdcScan.run([]);
+    commitAll(root, 'Bob', 'fix: debug', '2026-10-02T10:00:00Z');
+    await writeFile(path.join(root, '.tdc/config.json'), JSON.stringify({ game: { leaderboard: 'team' } }));
+    const data = await dashboardData(await loadProject(root));
+    expect(data.players).to.have.length(1);
+    expect(data.players[0]).to.include({ author: 'The team', coins: 5, paid: 5, rank: 'Intern' });
+    expect(JSON.stringify(data)).not.to.match(/Alice|Bob/);
   });
 
   it('shows the debt that is not committed yet', async () => {

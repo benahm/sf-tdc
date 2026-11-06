@@ -48,13 +48,10 @@ Since the last ledger: paid 30 TDC 🎉 · new debt 0 TDC
 Ledger written to .tdc/ledger.json: commit it with your changes.
 ```
 
-The commit earns you the 15 TDC you paid:
+The commit earns you the 15 TDC you paid: open the dashboard to see it in the **Collectors** view.
 
-```text
-$ sf tdc leaderboard --me
-👤 Alice — Intern (+15 TDC · #1 of 1)
-Next rank: Collector in 485 TDC ░░░░░░░░░░ 3%
-Badges: 🪙 First Payment
+```bash
+sf tdc dashboard
 ```
 
 ## Next steps

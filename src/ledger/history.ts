@@ -2,15 +2,7 @@ import path from 'node:path';
 
 import { git, showFile } from '../project/git.js';
 import { toPosix, type Project } from '../project/project.js';
-import {
-  compareLedgers,
-  EMPTY_LEDGER,
-  parseLedger,
-  sameRules,
-  totalCost,
-  type LedgerChanges,
-  type LedgerFinding,
-} from './ledger.js';
+import { compareLedgers, EMPTY_LEDGER, parseLedger, sameRules, totalCost, type LedgerChanges } from './ledger.js';
 
 export type CommitInfo = {
   sha: string;
@@ -114,7 +106,3 @@ export const readHistory = async (project: Project, options: { since?: string } 
   }
   return events;
 };
-
-/** Paid findings of an event, with the commit that paid them. */
-export const payments = (event: CommitEvent): Array<LedgerFinding & { sha: string; date: string }> =>
-  event.kind === 'scored' ? event.paid.map((finding) => ({ ...finding, sha: event.sha, date: event.date })) : [];
