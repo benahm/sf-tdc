@@ -12,20 +12,20 @@ workflows, what the agent must never do, the format of a declared debt and the c
 
 ```bash
 sf tdc next --json                 # the debt to fix, most expensive first
-sf tdc verify --id 3f9a2c --json   # exit code 0: paid, nothing created, nothing hidden
-sf tdc scan                        # then commit the fix with .tdc/ledger.json
+sf tdc scan                        # update the ledger
+sf tdc check --id 3f9a2c --json    # exit code 0: paid, nothing created, nothing hidden; then commit
 ```
 
 [`sf tdc next`](../commands/tdc-next.md) lists each debt with its rule, problem, file, line and the command that
 verifies it, in a stable order: two agents asking at the same time get the same work.
 
-[`sf tdc verify`](../commands/tdc-verify.md) compares the code with the ledger of `HEAD`. Each debt is `paid`,
+[`sf tdc check --id`](../commands/tdc-check.md) compares the code with the ledger of `HEAD`. Each debt is `paid`,
 `present`, `moved`, `deleted`, `suppressed` or `unclear`, and the debt the changes created is listed. It fails when
 debt is left, created or hidden, and its `nextSteps` tell the agent what to do.
 
 ### What is not a payment
 
-An agent takes the shortest path. These make debt disappear without fixing it, and `verify` refuses them:
+An agent takes the shortest path. These make debt disappear without fixing it, and `check` refuses them:
 
 - a suppression added to the code: `NOPMD`, `@SuppressWarnings`, `eslint-disable`;
 - a change of `.forceignore`, `code-analyzer.yml`, `sfdx-project.json`, `.tdc/config.json` or an ESLint configuration;
@@ -95,7 +95,7 @@ Prefer a pattern: many problems found by an agent come down to one. A prompt ver
 or `codex exec -`. It is asked `verifier.runs` times (3 by default): a verdict counts only when all agree, and a
 `present` whose evidence is not in the files is `unclear`.
 
-Once declared, the debt is in the queue of `sf tdc next`, and `sf tdc verify` marks it `fixed` when its verifier
+Once declared, the debt is in the queue of `sf tdc next`, and `sf tdc check` marks it `fixed` when its verifier
 finds it gone.
 
 ### False positives

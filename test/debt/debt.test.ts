@@ -6,11 +6,11 @@ import { stubSfCommandUx } from '@salesforce/sf-plugins-core';
 import { expect } from 'chai';
 
 import TdcAdd, { type TdcAddResult } from '../../src/commands/tdc/add.js';
+import TdcCheck from '../../src/commands/tdc/check.js';
 import TdcGuide from '../../src/commands/tdc/guide.js';
 import TdcNext from '../../src/commands/tdc/next.js';
 import TdcReject from '../../src/commands/tdc/reject.js';
 import TdcScan from '../../src/commands/tdc/scan.js';
-import TdcVerify from '../../src/commands/tdc/verify.js';
 import { declaredId, locate, severityOf, type DebtInput } from '../../src/debt/declared.js';
 import { parseVerdict, promptRunner } from '../../src/debt/verifier.js';
 import { commitAll, createProject, gitInit, removeProject, useFakeAnalyzer, writeSources } from '../helpers.js';
@@ -108,34 +108,45 @@ describe('agent commands', () => {
     expect(next.total).to.equal(2);
     expect(next.remaining).to.equal(1);
     expect(next.items[0]).to.deep.include({ rule: 'pmd:OperationWithLimitsInLoop', cost: 15, file: CLASS, line: 3 });
-    expect(next.items[0].verify).to.equal(`sf tdc verify --id ${next.items[0].id}`);
+    expect(next.items[0].verify).to.equal(`sf tdc check --id ${next.items[0].id}`);
     expect((await TdcNext.run(['--rule', 'debug'])).items.map((item) => item.rule)).to.deep.equal([
       'pmd:AvoidDebugStatements',
     ]);
   });
 
-  it('verify passes when the debt is paid, and fails when debt is created', async () => {
-    const [loop] = (await TdcNext.run(['--rule', 'Loop'])).items;
+  it('check --id passes when the debt is paid, and fails when it is not or the debt grew', async () => {
+    const [loop, debug] = (await TdcNext.run([])).items;
     await writeSources(root, { 'classes/AccountService.cls': SOURCE.replace('{ update a; }', '{}') });
-    const paid = await TdcVerify.run(['--id', loop.id.slice(0, 6)]);
+    await TdcScan.run([]);
+    const paid = await TdcCheck.run(['--id', loop.id.slice(0, 6)]);
     expect(paid.passed).to.equal(true);
     expect(paid.results).to.deep.equal([{ id: loop.id, source: 'code-analyzer', file: CLASS, status: 'paid' }]);
 
+    const present = await TdcCheck.run(['--id', debug.id]);
+    expect(present.passed).to.equal(false);
+    expect(present.results[0].status).to.equal('present');
+
+    // 15 TDC paid in the loop, 20 created by four debug statements
     await writeSources(root, {
-      'classes/AccountService.cls': SOURCE.replace('{ update a; }', "{ System.debug('a'); }"),
+      'classes/Logger.cls': Array.from({ length: 4 }, (_, index) => `System.debug('${index}');`).join('\n'),
     });
-    const created = await TdcVerify.run([]);
+    await TdcScan.run([]);
+    process.exitCode = undefined;
+    const created = await TdcCheck.run([]);
     expect(created.passed).to.equal(false);
-    expect(created.created.map((item) => item.rule)).to.deep.equal(['pmd:AvoidDebugStatements']);
+    expect(created.sinceBase).to.deep.include({ paid: 15, created: 20 });
+    expect(created.created).to.have.length(4);
+    expect(created.nextSteps[0]).to.match(/^Fix /);
     expect(process.exitCode).to.equal(1);
   });
 
-  it('verify refuses debt hidden by a suppression or a change of configuration', async () => {
+  it('check refuses debt hidden by a suppression or a change of configuration', async () => {
     const [debug] = (await TdcNext.run(['--rule', 'debug'])).items;
     await writeSources(root, {
       'classes/AccountService.cls': SOURCE.replace("System.debug('done');", "// NOPMD\n    Logger.log('done');"),
     });
-    const suppressed = await TdcVerify.run(['--id', debug.id]);
+    await TdcScan.run([]);
+    const suppressed = await TdcCheck.run(['--id', debug.id]);
     expect(suppressed.results[0].status).to.equal('suppressed');
     expect(suppressed.cheats).to.deep.include({
       code: 'SUPPRESSION_ADDED',
@@ -146,12 +157,21 @@ describe('agent commands', () => {
 
     await writeSources(root, { 'classes/AccountService.cls': SOURCE });
     await writeFile(path.join(root, '.forceignore'), '**/AccountService.cls\n');
-    const ignored = await TdcVerify.run([]);
+    await TdcScan.run([]);
+    const ignored = await TdcCheck.run([]);
     expect(ignored.passed).to.equal(false);
     expect(ignored.cheats.map((cheat) => [cheat.code, cheat.file])).to.deep.equal([['CONFIG_CHANGED', '.forceignore']]);
+    expect(ignored.results.map((item) => item.status)).to.deep.equal(['suppressed', 'suppressed']);
   });
 
-  it('add declares a debt whose verifier finds it, and verify marks it fixed', async () => {
+  it('check accepts a change of configuration that hides no debt', async () => {
+    await writeFile(path.join(root, '.tdc/config.json'), JSON.stringify({ dailyRate: 800 }));
+    const result = await TdcCheck.run([]);
+    expect(result.passed).to.equal(true);
+    expect(result.warnings[0]).to.include('.tdc/config.json changed');
+  });
+
+  it('add declares a debt whose verifier finds it, and check marks it fixed', async () => {
     const added = await addFromFile(HARDCODED_ID);
     expect(added.debt).to.deep.include({ status: 'confirmed', severity: 'Critical', cost: 60, source: 'agent' });
     expect(added.file).to.equal(`.tdc/debts/${added.debt.id}.json`);
@@ -166,7 +186,8 @@ describe('agent commands', () => {
     await writeSources(root, {
       'classes/AccountService.cls': SOURCE.replace("'005000000000001'", 'UserInfo.getUserId()'),
     });
-    const fixed = await TdcVerify.run([]);
+    await TdcScan.run([]);
+    const fixed = await TdcCheck.run([]);
     expect(fixed.results).to.deep.include({
       id: added.debt.id,
       source: 'agent',

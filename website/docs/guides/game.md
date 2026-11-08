@@ -33,21 +33,9 @@ author name.
 
 ## Payoff date and goal
 
-`sf tdc history` shows the debt commit by commit, and forecasts when it reaches 0 at the pace of the history:
-
-```text
-$ sf tdc history
-┌────────────┬─────────┬────────┬──────┬─────┬──────────┬────────┐
-│ Date       │ Commit  │ Author │ Paid │ New │ Earned   │ Debt   │
-├────────────┼─────────┼────────┼──────┼─────┼──────────┼────────┤
-│ 2026-09-01 │ 1a2b3c4 │ Alice  │      │     │ baseline │ 52,400 │
-│ 2026-09-03 │ 5d6e7f8 │ Bob    │ -240 │     │ +240     │ 52,160 │
-│ 2026-09-04 │ 9a8b7c6 │ Carol  │ -30  │ +62 │ -32      │ 52,192 │
-└────────────┴─────────┴────────┴──────┴─────┴──────────┴────────┘
-💰 Debt: 52,192 TDC (≈ 124.3 man-days · 74,560 EUR)
-📈 At this pace (69.3 TDC/day), the debt is paid off on 2028-11-10.
-🎯 Goal 20,000 TDC by 2027-03-31: ░░░░░░░░░░░░░░░░░░░░ 1% · projected 40,896 TDC: speed up!
-```
+[`sf tdc dashboard`](../commands/tdc-dashboard.md) shows the debt commit by commit, and forecasts when it reaches 0
+at the pace of the history since the latest baseline, with the progress toward the goal and the projected debt on
+its date.
 
 Set the goal with `sf tdc init --goal-debt 20000 --goal-date 2027-03-31`, or in
 [the configuration](./configuration.md).

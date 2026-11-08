@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -71,14 +72,14 @@ describe('tdc commands', () => {
     expect(existsSync(path.join(root, '.tdc/ledger.json'))).to.equal(false);
   });
 
-  it('check fails on a missing or stale ledger, and on debt growing since --base', async () => {
+  it('check fails on a missing or stale ledger, and on debt growing since the base', async () => {
     expect((await TdcCheck.run([])).failures).to.have.length(1);
     expect(process.exitCode).to.equal(1);
 
     await TdcScan.run([]);
     commitAll(root, 'Alice', 'chore: first ledger');
     process.exitCode = undefined;
-    expect((await TdcCheck.run(['--base', 'HEAD'])).passed).to.equal(true);
+    expect((await TdcCheck.run([])).passed).to.equal(true);
 
     await writeSources(root, {
       'classes/Logger.cls': "public class Logger { void log() { System.debug('x'); } }",
@@ -87,9 +88,29 @@ describe('tdc commands', () => {
     expect(stale.ledgerUpToDate).to.equal(false);
 
     await TdcScan.run([]);
-    const grew = await TdcCheck.run(['--base', 'HEAD', '--max-debt', '10']);
-    expect(grew.sinceBase).to.deep.equal({ base: 'HEAD', paid: 0, created: 5 });
+    const grew = await TdcCheck.run(['--max-debt', '10']);
+    expect(grew.base).to.equal('HEAD');
+    expect(grew.sinceBase).to.deep.equal({ paid: 0, deleted: 0, created: 5, moved: 0 });
     expect(grew.failures).to.have.length(2);
+  });
+
+  it('check --base compares with the fork point of the branch, and accepts paying more than creating', async () => {
+    await TdcScan.run([]);
+    commitAll(root, 'Alice', 'chore: first ledger');
+    execFileSync('git', ['checkout', '-q', '-b', 'feature'], { cwd: root });
+    await writeSources(root, {
+      'classes/AccountService.cls': LOOP.replace('{ update a; }', "{ System.debug('a'); }"),
+    });
+    await TdcScan.run([]);
+    commitAll(root, 'Bob', 'fix: no DML in the loop');
+
+    const result = await TdcCheck.run(['--base', 'main']);
+    expect(result.sinceBase).to.deep.include({ paid: 15, created: 5 });
+    expect(result.passed).to.equal(true);
+    expect(result.results.map((item) => item.status)).to.deep.equal(['paid']);
+
+    const refused = await TdcCheck.run(['--base', 'nope']).catch((error: Error) => error.name);
+    expect(refused).to.equal('UNKNOWN_BASE');
   });
 
   it('scan keeps the ledger byte for byte when nothing changed', async () => {

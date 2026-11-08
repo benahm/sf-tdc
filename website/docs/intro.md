@@ -39,8 +39,8 @@ reads. The Technical Debt Collector answers three questions instead:
 | --- | --- |
 | [`sf tdc init`](./commands/tdc-init.md) | Sets up the project: daily rate, rules, goal. |
 | [`sf tdc scan`](./commands/tdc-scan.md) | Finds and prices the debt, writes the ledger to commit. |
-| [`sf tdc history`](./commands/tdc-history.md) | The debt commit by commit, and the forecast payoff date. |
-| [`sf tdc check`](./commands/tdc-check.md) | CI gate: the ledger is up to date, and the debt doesn't grow. |
+| [`sf tdc dashboard`](./commands/tdc-dashboard.md) | The debt as a bank statement: balance, payoff date, bounties, collectors. |
+| [`sf tdc check`](./commands/tdc-check.md) | CI and agent gate: the ledger is up to date, the debt doesn't grow, nothing hides it. |
 
 ## Principles
 

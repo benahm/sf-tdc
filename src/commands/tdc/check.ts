@@ -1,25 +1,23 @@
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-
 import { Messages } from '@salesforce/core';
 import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 
-import { compareLedgers, parseLedger, sameRules, serializeLedger, totalCost } from '../../ledger/ledger.js';
-import { git, showFile } from '../../project/git.js';
-import { loadProject, toPosix } from '../../project/project.js';
+import { toSfError } from '../../debt/declared.js';
+import { checkChanges, type Check, type CheckStatus } from '../../debt/work.js';
+import { loadProject } from '../../project/project.js';
 import { formatTdc, signed } from '../../report/format.js';
-import { scan, toLedger } from '../../scan/engine.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-tdc', 'tdc.check');
 
-export type TdcCheckResult = {
-  passed: boolean;
-  debt: number;
-  ledgerUpToDate: boolean;
-  /** Changes since --base, in TDC. */
-  sinceBase?: { base: string; paid: number; created: number };
-  failures: string[];
+export type TdcCheckResult = Check;
+
+const STATUS_ICONS: Record<CheckStatus, string> = {
+  paid: '✅',
+  moved: '➡️',
+  deleted: '🗑️',
+  present: '❌',
+  suppressed: '🚫',
+  unclear: '❓',
 };
 
 export default class TdcCheck extends SfCommand<TdcCheckResult> {
@@ -32,6 +30,11 @@ export default class TdcCheck extends SfCommand<TdcCheckResult> {
       char: 'b',
       summary: messages.getMessage('flags.base.summary'),
     }),
+    id: Flags.string({
+      char: 'i',
+      summary: messages.getMessage('flags.id.summary'),
+      multiple: true,
+    }),
     'max-debt': Flags.integer({
       summary: messages.getMessage('flags.max-debt.summary'),
     }),
@@ -40,62 +43,36 @@ export default class TdcCheck extends SfCommand<TdcCheckResult> {
   public async run(): Promise<TdcCheckResult> {
     const { flags } = await this.parse(TdcCheck);
     const project = await loadProject(process.cwd());
-    const ledgerFile = toPosix(path.relative(project.root, project.ledgerFile));
-    const ledger = toLedger(await scan(project));
-    const debt = totalCost(ledger.findings);
-    const failures: string[] = [];
-
-    let stored: string | undefined;
+    let check: Check;
     try {
-      stored = (await readFile(project.ledgerFile, 'utf8')).replace(/\r\n/g, '\n');
-    } catch {
-      failures.push(messages.getMessage('failure.noLedger', [ledgerFile]));
-    }
-    const ledgerUpToDate = stored === serializeLedger(ledger);
-    if (stored !== undefined && !ledgerUpToDate) failures.push(messages.getMessage('failure.stale', [ledgerFile]));
-
-    let sinceBase: TdcCheckResult['sinceBase'];
-    if (flags.base) {
-      const base = flags.base;
-      const repoRoot = project.gitRoot ?? project.root;
-      try {
-        await git(repoRoot, ['rev-parse', '--verify', `${base}^{commit}`]);
-      } catch (error) {
-        throw messages.createError('error.base', [base, (error as Error).message.trim()]);
-      }
-      const baseContent = await showFile(repoRoot, base, toPosix(path.relative(repoRoot, project.ledgerFile)));
-      if (baseContent === undefined) {
-        this.warn(messages.getMessage('warning.noBaseLedger', [base]));
-      } else if (!sameRules(parseLedger(baseContent), ledger)) {
-        this.warn(messages.getMessage('warning.rulesChanged', [base]));
-      } else {
-        const changes = compareLedgers(parseLedger(baseContent), ledger);
-        sinceBase = {
-          base,
-          paid: totalCost(changes.paid) + totalCost(changes.deleted),
-          created: totalCost(changes.created),
-        };
-        this.log(messages.getMessage('info.sinceBase', [base, formatTdc(sinceBase.paid), signed(sinceBase.created)]));
-        const growth = sinceBase.created - sinceBase.paid;
-        if (growth > 0) {
-          failures.push(messages.getMessage('failure.grew', [growth, base, sinceBase.created, sinceBase.paid]));
-        }
-      }
+      check = await checkChanges(project, { base: flags.base, ids: flags.id, maxDebt: flags['max-debt'] });
+    } catch (error) {
+      throw toSfError(error);
     }
 
-    const maxDebt = flags['max-debt'];
-    if (maxDebt !== undefined && debt > maxDebt) {
-      failures.push(messages.getMessage('failure.maxDebt', [formatTdc(debt), formatTdc(maxDebt)]));
+    for (const warning of check.warnings) this.warn(warning);
+    for (const item of check.results) {
+      this.log(`${STATUS_ICONS[item.status]} ${item.id} ${item.status} (${item.file})`);
+    }
+    for (const item of check.created) {
+      this.log(
+        messages.getMessage('info.created', [item.id, item.rule, item.line ? `${item.file}:${item.line}` : item.file])
+      );
+    }
+    if (check.sinceBase) {
+      const { paid, deleted, created } = check.sinceBase;
+      this.log(messages.getMessage('info.sinceBase', [check.base, formatTdc(paid + deleted), signed(created)]));
     }
 
-    const passed = failures.length === 0;
-    if (passed) {
-      this.log(messages.getMessage('info.passed', [formatTdc(debt)]));
+    if (check.passed) {
+      this.log(messages.getMessage('info.passed', [formatTdc(check.debt)]));
     } else {
       this.log(messages.getMessage('info.failed'));
-      for (const failure of failures) this.logToStderr(`  - ${failure}`);
+      for (const failure of check.failures) this.logToStderr(`  - ${failure}`);
+      this.log(messages.getMessage('info.nextSteps'));
+      for (const step of check.nextSteps) this.log(`  - ${step}`);
       process.exitCode = 1;
     }
-    return { passed, debt, ledgerUpToDate, sinceBase, failures };
+    return check;
   }
 }

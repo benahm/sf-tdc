@@ -402,7 +402,7 @@ function showDebt(f) {
       ? el("p", "Bounty: +" + fmt(f.cost) + " coins for the commit that repays it.", "gold")
       : el("p", "No bounty: declared debt is outside the ledger and coin calculations.", "muted")
   );
-  const command = "sf tdc verify --id " + f.id;
+  const command = "sf tdc check --id " + f.id;
   body.append(el("pre", command));
   const copy = el("button", "Copy verification command");
   copy.type = "button";

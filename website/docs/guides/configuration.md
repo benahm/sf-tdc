@@ -29,7 +29,7 @@ title: Configuration
 | `severityCosts` | 60, 30, 15, 5, 2 | Cost of a finding, in TDC, by severity of its [rule](../rules.md). |
 | `rules.<engine:rule>.enabled` | `true` | `false` disables a rule. |
 | `rules.<engine:rule>.cost` | its severity's | Cost of a finding of this rule, in TDC. |
-| `goal` | none | Debt to reach (`debt`, in TDC) by a date (`date`, `YYYY-MM-DD`), shown by `sf tdc history`. |
+| `goal` | none | Debt to reach (`debt`, in TDC) by a date (`date`, `YYYY-MM-DD`), shown by `sf tdc dashboard`. |
 | `game.rewardDeletedFiles` | `false` | Whether deleting a whole file earns the TDC of its debt. |
 | `game.leaderboard` | `named` | `team` sums the collectors of the [dashboard](./dashboard.md) into the team, and leaves the names of the authors out of the report. |
 | `sourceDirs` | `packageDirectories` | Folders to scan, relative to the project root. |

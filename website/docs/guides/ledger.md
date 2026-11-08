@@ -34,7 +34,7 @@ history in git: there is no server and no database.
 
 ## Who paid what
 
-`sf tdc history` reads every version of the ledger in git and compares each commit with its parent:
+`sf tdc dashboard` reads every version of the ledger in git and compares each commit with its parent:
 
 | Change | Meaning | TDC of the author |
 | --- | --- | --- |

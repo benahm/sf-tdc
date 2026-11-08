@@ -35,8 +35,6 @@ export type TdcConfig = {
   rules: Record<string, RuleSetting>;
   goal?: Goal;
   game: {
-    /** Whether deleting a whole file earns the coins of its debt. */
-    rewardDeletedFiles: boolean;
     /** "named" ranks each author in the dashboard; "team" sums them into one, and leaves names out of the report. */
     leaderboard: 'named' | 'team';
   };
@@ -56,7 +54,7 @@ export const DEFAULT_CONFIG: TdcConfig = {
   ruleSelectors: ['Recommended'],
   severityCosts: { Critical: 60, High: 30, Moderate: 15, Low: 5, Info: 2 },
   rules: {},
-  game: { rewardDeletedFiles: false, leaderboard: 'named' },
+  game: { leaderboard: 'named' },
 };
 
 export type Project = {

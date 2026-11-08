@@ -86,14 +86,14 @@ export const readHistory = async (project: Project, options: { since?: string } 
         .map(toProjectPath)
     );
     const changes = compareLedgers(before, after, deletedFiles);
-    const reward = totalCost(changes.paid) + (project.config.game.rewardDeletedFiles ? totalCost(changes.deleted) : 0);
     return [
       {
         ...commit,
         ...changes,
         kind,
         debt: totalCost(after.findings),
-        coins: kind === 'scored' ? reward - totalCost(changes.created) : 0,
+        // deleting a file is not paying its debt
+        coins: kind === 'scored' ? totalCost(changes.paid) - totalCost(changes.created) : 0,
       },
     ];
   };

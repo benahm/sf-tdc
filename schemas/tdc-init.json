@@ -86,10 +86,6 @@
         "game": {
           "type": "object",
           "properties": {
-            "rewardDeletedFiles": {
-              "type": "boolean",
-              "description": "Whether deleting a whole file earns the coins of its debt."
-            },
             "leaderboard": {
               "type": "string",
               "enum": [
@@ -100,7 +96,6 @@
             }
           },
           "required": [
-            "rewardDeletedFiles",
             "leaderboard"
           ],
           "additionalProperties": false

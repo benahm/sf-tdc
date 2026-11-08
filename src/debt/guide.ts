@@ -39,8 +39,9 @@ export const buildGuide = (project: Project): Guide => ({
     fix: [
       'sf tdc next --json: the debt to fix, most expensive first',
       'Fix one item, in its file and around its line',
-      'sf tdc verify --id <id> --json: exit code 0 when it is paid and nothing was created or hidden; otherwise follow nextSteps',
-      'sf tdc scan, then commit the fix with .tdc/ledger.json and .tdc/debts',
+      'sf tdc scan: update the ledger',
+      'sf tdc check --id <id> --json: exit code 0 when it is paid, the debt did not grow and nothing was hidden; otherwise follow nextSteps',
+      'Commit the fix with .tdc/ledger.json and .tdc/debts',
     ],
     declare: [
       'sf tdc next --source agent --json: the debt already declared, not to declare it twice',
@@ -50,7 +51,7 @@ export const buildGuide = (project: Project): Guide => ({
     ],
   },
   rules: [
-    'Never hide debt: no NOPMD, @SuppressWarnings, eslint-disable, nor changes to .forceignore, code-analyzer.yml, sfdx-project.json or .tdc/config.json. sf tdc verify fails on them.',
+    'Never hide debt: no NOPMD, @SuppressWarnings, eslint-disable, nor changes to .forceignore, code-analyzer.yml, sfdx-project.json or .tdc/config.json. sf tdc check fails on them.',
     'Deleting a file is not paying its debt.',
     'Do not edit the verifier of a declared debt to make it pass: a person decides on a false positive (sf tdc reject).',
     'Prefer a pattern verifier: it is deterministic. Use a prompt only when no pattern can tell the fix.',

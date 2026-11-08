@@ -50,10 +50,9 @@ Fair play:
 | Command | |
 | --- | --- |
 | `sf tdc init` | Creates `.tdc/config.json`: `--daily-rate`, `--currency`, `--goal-debt` and `--goal-date`. |
-| `sf tdc scan` | Finds and prices the debt, writes the ledger. `--dry-run`, `--details` (every finding with its line), `--report-file report.md`, `-d` to scan other folders. |
+| `sf tdc scan` | Finds and prices the debt, writes the ledger. `--dry-run`, `--report-file report.md` (every finding with its line), `-d` to scan other folders. |
 | `sf tdc dashboard` | Opens an offline dashboard from the ledger and git history, laid out as a bank statement: balance due and payoff date, debt evolution, bounties, collectors and their ranks (or the team total with `game.leaderboard: "team"`), commit by commit. `--output ./report.html` exports without opening a browser. |
-| `sf tdc history` | The debt commit by commit, and when it will be paid off at this pace. `--since`, `--limit`. |
-| `sf tdc check` | CI gate: fails when the ledger is out of date, when the debt grew since `--base <ref>`, or when it is above `--max-debt`. |
+| `sf tdc check` | CI gate: fails when the ledger is out of date, when the debt grew since `--base <ref>` (`HEAD` by default), when a suppression or a change of configuration hid debt, when a debt given with `--id` is not paid, or when it is above `--max-debt`. |
 
 Every command supports `--json`; its format is pinned by [`schemas/`](schemas).
 
@@ -63,7 +62,7 @@ Every command supports `--json`; its format is pinned by [`schemas/`](schemas).
 | --- | --- |
 | `sf tdc guide` | How an agent works with sf-tdc: the workflows, what it must never do, the format of a declared debt. |
 | `sf tdc next` | The work queue: the debt to fix, most expensive first, with its file, line and the command that verifies it. `--limit`, `--file`, `--rule`, `--source`. |
-| `sf tdc verify` | Whether the changes since HEAD paid the debt (`--id`), created none, and hid none: a suppression (`NOPMD`, `@SuppressWarnings`...) or a change of `.forceignore` or `code-analyzer.yml` is not a payment. Exit code 1 otherwise, with the next steps. |
+| `sf tdc check --id` | Whether the changes since HEAD paid the debt, created none, and hid none: a suppression (`NOPMD`, `@SuppressWarnings`...) or a change of `.forceignore` or `code-analyzer.yml` is not a payment. Exit code 1 otherwise, with the next steps. |
 | `sf tdc add` | Declares debt that the rules don't find, with a verifier (a pattern, or a prompt) that must find it on the current code. |
 | `sf tdc reject` | Sets a declared debt aside: a false positive, for a person to decide. |
 

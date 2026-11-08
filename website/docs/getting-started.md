@@ -33,10 +33,11 @@ This first ledger is the **baseline**: its debt was not created by this commit, 
 
 ## Pay some debt
 
-Fix a finding, for example a query inside a loop. `--details` lists every finding with its file and line:
+Fix a finding, for example a query inside a loop. `sf tdc next` lists the debt, most expensive first, with its file and
+line:
 
 ```bash
-sf tdc scan --dry-run --details
+sf tdc next --limit 10
 ```
 
 Then scan again and commit the ledger with the fix:

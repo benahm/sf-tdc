@@ -3,52 +3,251 @@
   "$ref": "#/definitions/TdcCheckResult",
   "definitions": {
     "TdcCheckResult": {
+      "$ref": "#/definitions/Check"
+    },
+    "Check": {
       "type": "object",
       "properties": {
         "passed": {
           "type": "boolean"
         },
         "debt": {
-          "type": "number"
+          "type": "number",
+          "description": "Debt of the code, in TDC."
         },
         "ledgerUpToDate": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether .tdc/ledger.json matches the code."
+        },
+        "base": {
+          "type": "string",
+          "description": "The ref the code is compared with, when there is one."
         },
         "sinceBase": {
           "type": "object",
           "properties": {
-            "base": {
-              "type": "string"
-            },
             "paid": {
+              "type": "number"
+            },
+            "deleted": {
               "type": "number"
             },
             "created": {
               "type": "number"
+            },
+            "moved": {
+              "type": "number"
             }
           },
           "required": [
-            "base",
             "paid",
-            "created"
+            "deleted",
+            "created",
+            "moved"
           ],
           "additionalProperties": false,
-          "description": "Changes since --base, in TDC."
+          "description": "Changes since the base, in TDC; missing when there is no base ledger, or when the rules changed since."
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CheckItem"
+          },
+          "description": "The debt given with --id, or without it, the debt that the changes paid or touched."
+        },
+        "created": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkItem"
+          },
+          "description": "Debt that the changes created."
+        },
+        "cheats": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Cheat"
+          }
         },
         "failures": {
           "type": "array",
           "items": {
             "type": "string"
+          },
+          "description": "Why the check failed: empty when it passed."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
           }
+        },
+        "nextSteps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "What to do next, for an agent."
         }
       },
       "required": [
         "passed",
         "debt",
         "ledgerUpToDate",
-        "failures"
+        "results",
+        "created",
+        "cheats",
+        "failures",
+        "warnings",
+        "nextSteps"
       ],
       "additionalProperties": false
+    },
+    "CheckItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "code-analyzer",
+            "agent",
+            "human"
+          ]
+        },
+        "file": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/CheckStatus"
+        },
+        "verdicts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Verdict"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "file",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "CheckStatus": {
+      "type": "string",
+      "enum": [
+        "paid",
+        "present",
+        "moved",
+        "deleted",
+        "suppressed",
+        "unclear"
+      ],
+      "description": "- `paid`: the debt is gone, and nothing hid it;\n- `present`: the debt is still there;\n- `moved`: the debt is gone from its file but found again in another one: neither paid nor created;\n- `deleted`: the debt went away with its file: not a payment;\n- `suppressed`: the debt is gone, but a suppression or a change of configuration hid it;\n- `unclear`: the prompt verifier did not agree with itself."
+    },
+    "Verdict": {
+      "type": "object",
+      "properties": {
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "present",
+            "fixed",
+            "unclear"
+          ]
+        },
+        "evidence": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict"
+      ],
+      "additionalProperties": false
+    },
+    "WorkItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "code-analyzer",
+            "agent",
+            "human"
+          ]
+        },
+        "cost": {
+          "type": "number"
+        },
+        "rule": {
+          "type": "string",
+          "description": "`engine:rule` of code-analyzer, or `declared:<category>`."
+        },
+        "problem": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "number"
+        },
+        "snippet": {
+          "type": "string"
+        },
+        "verify": {
+          "type": "string",
+          "description": "The command that tells whether it is fixed."
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "cost",
+        "rule",
+        "problem",
+        "file",
+        "snippet",
+        "verify"
+      ],
+      "additionalProperties": false,
+      "description": "A debt to fix, whatever found it: enough for an agent to act without reading anything else."
+    },
+    "Cheat": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "SUPPRESSION_ADDED",
+            "CONFIG_CHANGED"
+          ]
+        },
+        "file": {
+          "type": "string",
+          "description": "Relative to the project root."
+        },
+        "line": {
+          "type": "number"
+        },
+        "fix": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "file",
+        "fix"
+      ],
+      "additionalProperties": false,
+      "description": "A change that makes debt disappear without fixing it:\n- `SUPPRESSION_ADDED`: a comment or an annotation that hides a violation (NOPMD,"
     }
   }
 }

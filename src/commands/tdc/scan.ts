@@ -41,9 +41,6 @@ export default class TdcScan extends SfCommand<TdcScanResult> {
       char: 'r',
       summary: messages.getMessage('flags.report-file.summary'),
     }),
-    details: Flags.boolean({
-      summary: messages.getMessage('flags.details.summary'),
-    }),
   };
 
   public async run(): Promise<TdcScanResult> {
@@ -56,7 +53,7 @@ export default class TdcScan extends SfCommand<TdcScanResult> {
     if (!flags['dry-run'] && changed) await writeLedger(project.ledgerFile, ledger);
     const report = buildReport(project, result, previous, !flags['dry-run'] && changed);
 
-    this.print(report, flags.details);
+    this.print(report);
     if (flags['dry-run']) {
       this.log(messages.getMessage('info.dryRun', [report.ledgerFile]));
     } else {
@@ -69,7 +66,7 @@ export default class TdcScan extends SfCommand<TdcScanResult> {
     return report;
   }
 
-  private print(report: ScanReport, details: boolean): void {
+  private print(report: ScanReport): void {
     if (report.debt === 0) {
       this.log(messages.getMessage('info.noDebt'));
       return;
@@ -96,21 +93,5 @@ export default class TdcScan extends SfCommand<TdcScanResult> {
     });
     const boss = report.topFiles[0];
     this.log(messages.getMessage('info.boss', [boss.file, formatNumber(boss.cost)]));
-    if (details) {
-      this.table({
-        data: report.findings.map((finding) => ({
-          location: finding.line ? `${finding.file}:${finding.line}` : finding.file,
-          rule: finding.rule,
-          cost: finding.cost,
-          message: finding.message,
-        })),
-        columns: [
-          { key: 'location', name: 'File' },
-          { key: 'rule', name: 'Rule' },
-          { key: 'cost', name: 'TDC' },
-          { key: 'message', name: 'Finding' },
-        ],
-      });
-    }
   }
 }
