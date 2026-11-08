@@ -26,7 +26,8 @@ sf plugins install sf-tdc@beta
 
 ## How it works
 
-1. `sf tdc init` creates `.tdc/config.json`; `sf tdc scan` finds the debt and writes `.tdc/ledger.json`.
+1. `sf tdc init` creates `.tdc/config.json`; `sf tdc scan` finds the debt and writes `.tdc/ledger.json`, and the
+   descriptions of its rules to `.tdc/catalog.json`.
    **Commit both.**
 2. Every developer runs `sf tdc scan` before committing. The ledger holds one finding per line, without line numbers:
    a pull request shows the debt it pays as removed lines and the debt it adds as added lines.

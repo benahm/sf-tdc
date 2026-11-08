@@ -32,6 +32,9 @@ history in git: there is no server and no database.
   Analyzer and its engines.
 - **Deterministic.** Scanning unchanged code rewrites nothing, so `sf tdc check` can compare it byte for byte.
 
+Next to it, `.tdc/catalog.json` describes the enabled rules (category, severity, description, documentation link) for
+the [dashboard](./dashboard.md). It changes only with the rules or the engines, and no score depends on it.
+
 ## Who paid what
 
 `sf tdc dashboard` reads every version of the ledger in git and compares each commit with its parent:

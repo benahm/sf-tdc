@@ -27,15 +27,17 @@ sf tdc scan
 sf tdc dashboard
 ```
 
-Generating or opening a report never runs analyzers or prompt verifiers, updates the ledger, or modifies declared debts. Analyzer findings show the rule and snippet stored in the ledger; current messages and line numbers are not stored in it.
+Generating or opening a report never runs analyzers or prompt verifiers, updates the ledger, or modifies declared debts.
+
+The ledger stores neither descriptions nor line numbers. The report takes the description, category, severity and documentation link of each rule from `.tdc/catalog.json`, written by `sf tdc scan`; without it, findings show their rule id and the debt is grouped by engine. The line of each finding is found again in the current source from its snippet: a file changed since the scan can give no line.
 
 ## Views
 
 The dashboard reads like a bank statement for the technical debt.
 
 - **Statement of account**: the balance due in TDC, in workdays and at your daily rate; the debt of the ledger on disk that is not committed yet; the date the debt is repaid at the committed pace, with a stamp (*On track*, *Behind*, *Overdue*, *Repaying*, *Accruing* or *Paid in full*).
-- **Overview**: credits (repaid), debits (new debt), net change and coins collected over a selected period; the repayment trajectory; *collection notices* for the files that owe the most; *bounties* for the most expensive debts, worth as many coins once repaid; the progress toward the configured objective, with milestones.
-- **Debts**: search by file, problem, rule or ID; filter by source and engine; inspect snippets and copy a verification command. Declared debt has a separate total and remains outside the ledger and coin calculations.
+- **Overview**: credits (repaid), debits (new debt), the commits that repaid more than they created, and coins collected over a selected period; the repayment trajectory; *collection notices* for the files that owe the most; the debt by category, each opening its debts; *bounties*: the most expensive debts, one per file, and *quick fixes*, the cheapest ones, one per rule, each worth as many coins once repaid; the progress toward the configured objective, with milestones.
+- **Debts**: search by file, problem, rule or ID; filter by source and category; inspect the description, line, snippet and rule documentation, and copy a verification command. Declared debt has a separate total and remains outside the ledger and coin calculations.
 - **Collectors**: the authors ranked by the TDC they earned, with a podium and the progress of each collector toward the next rank. Authors appear by name only, without email. With `game.leaderboard` set to `team` in the [configuration](./configuration.md), the view shows the team total and the report holds no author name.
 - **Statement**: each committed ledger as a statement line with its debit, credit, running balance and coins. Baselines and rule changes appear as revaluations and score no coins.
 

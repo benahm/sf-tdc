@@ -18,6 +18,8 @@ export type AnalyzerRule = {
   severity: Severity;
   tags: string[];
   description: string;
+  /** Documentation of the rule, when its engine gives one. */
+  url?: string;
 };
 
 export type AnalyzerViolation = {
@@ -65,6 +67,7 @@ export const runCodeAnalyzer: Analyzer = async (project, files) => {
         severity: SeverityLevel[rule.getSeverityLevel()] as Severity,
         tags: rule.getTags(),
         description: rule.getDescription(),
+        ...(rule.getResourceUrls()[0] ? { url: rule.getResourceUrls()[0] } : {}),
       })
     )
   );

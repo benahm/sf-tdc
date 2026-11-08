@@ -44,6 +44,9 @@ const withCoin = (node) => {
 const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const all = [...data.findings, ...data.declared];
 const measured = (f) => f.source === "code-analyzer";
+/* The category of the rule from the catalog, or its engine when the catalog is missing */
+const groupOf = (f) => f.category || f.rule.split(":")[0];
+const where = (f) => f.file + (f.line ? ":" + f.line : "");
 let period = 0,
   page = 0,
   eventLimit = 30;
@@ -167,9 +170,11 @@ function totals(events) {
     coins = events.reduce((s, e) => s + e.coins, 0);
   text("paid", "−" + fmt(paid));
   text("created", "+" + fmt(created));
-  const net = created - paid;
-  text("net", signed(net));
-  $("net").className = "value number " + (net > 0 ? "created" : net < 0 ? "paid" : "");
+  const scored = events.filter((e) => e.kind === "scored"),
+    repaying = scored.filter((e) => e.paid > e.created).length;
+  text("repaying", fmt(repaying) + " / " + fmt(scored.length));
+  $("repaying").className =
+    "value number " + (!scored.length ? "" : repaying * 2 >= scored.length ? "paid" : "created");
   text("coins", signed(coins));
   $("coins").append(" ", coin());
   $("coins").className = "value number " + (coins < 0 ? "created" : "gold");
@@ -310,18 +315,86 @@ debtors.forEach(([file, o], i) => {
   $("files").append(b);
 });
 
-/* Bounties: the most expensive debts, worth as many coins once repaid */
-const bounties = [...data.findings].sort((a, b) => b.cost - a.cost || a.file.localeCompare(b.file)).slice(0, 4);
-if (!bounties.length) $("next").append(el("p", "No bounty left. Every measured debt is repaid.", "empty"));
-bounties.forEach((f) => {
+/* What the debt is made of: measured debt by category, each bar opening the debts of its category */
+(function categories() {
+  const groups = new Map();
+  data.findings.forEach((f) => {
+    const g = groups.get(groupOf(f)) || { cost: 0, count: 0 };
+    g.cost += f.cost;
+    g.count++;
+    groups.set(groupOf(f), g);
+  });
+  const rows = [...groups].sort((a, b) => b[1].cost - a[1].cost || a[0].localeCompare(b[0]));
+  $("cataloghint").hidden = data.catalog || !data.findings.length;
+  if (!data.catalog) text("categorytag", "By engine");
+  if (!rows.length) $("categories").append(el("p", "No measured debt.", "empty"));
+  const top = rows.length ? rows[0][1].cost : 1;
+  rows.forEach(([name, g]) => {
+    const b = el("button", undefined, "category");
+    b.type = "button";
+    const head = el("div", undefined, "row");
+    head.append(
+      el("span", name, "name"),
+      el("span", fmt(g.cost) + " TDC · " + Math.round((g.cost / Math.max(data.debt, 1)) * 100) + "%", "number")
+    );
+    const track = el("div", undefined, "track"),
+      fill = el("div", undefined, "fill");
+    fill.style.width = (g.cost / Math.max(top, 1)) * 100 + "%";
+    track.append(fill);
+    b.append(head, track, el("small", g.count + (g.count === 1 ? " finding" : " findings"), "muted"));
+    b.setAttribute("aria-label", name + ": " + fmt(g.cost) + " TDC in " + g.count + " findings. Show these debts.");
+    b.onclick = () => {
+      $("search").value = "";
+      $("source").value = "code-analyzer";
+      $("engine").value = name;
+      page = 0;
+      renderRows();
+      tab("debts");
+    };
+    $("categories").append(b);
+  });
+})();
+
+/* Bounties: the most expensive debts, one per file, and the cheapest ones, one per rule */
+function bountyCard(f) {
   const b = el("button", undefined, "bounty");
   b.type = "button";
   const reward = el("div", undefined, "reward");
   reward.append(withCoin(el("strong", "+" + fmt(f.cost), "number")), el("small", "bounty"));
-  b.append(el("p", f.rule, "mono"), reward, el("small", f.file));
+  const what = el("div", undefined, "what");
+  what.append(el("p", f.problem));
+  if (f.problem !== f.rule) what.append(el("small", f.rule, "mono"));
+  what.append(el("small", where(f), "mono muted"));
+  b.append(what, reward);
   b.onclick = () => showDebt(f);
-  $("next").append(b);
-});
+  return b;
+}
+function pick(sorted, keyOf, count, skip) {
+  const seen = new Set(),
+    out = [];
+  for (const f of sorted) {
+    if (out.length === count) break;
+    if (seen.has(keyOf(f)) || (skip && skip.has(f.id))) continue;
+    seen.add(keyOf(f));
+    out.push(f);
+  }
+  return out;
+}
+const big = pick(
+  [...data.findings].sort((a, b) => b.cost - a.cost || a.file.localeCompare(b.file) || a.id.localeCompare(b.id)),
+  (f) => f.file,
+  4
+);
+const quick = pick(
+  [...data.findings].sort((a, b) => a.cost - b.cost || a.file.localeCompare(b.file) || a.id.localeCompare(b.id)),
+  (f) => f.rule,
+  4,
+  new Set(big.map((f) => f.id))
+);
+if (!big.length) $("next").append(el("p", "No bounty left. Every measured debt is repaid.", "empty"));
+big.forEach((f) => $("next").append(bountyCard(f)));
+if (big.length && !quick.length) $("quick").append(el("p", "Every rule is already in the big bounties.", "empty"));
+quick.forEach((f) => $("quick").append(bountyCard(f)));
 
 /* Objective: progress toward the goal */
 if (data.goal) {
@@ -375,7 +448,7 @@ if (data.goal) {
 }
 
 /* Debts */
-const keys = [...new Set(all.map((f) => f.rule.split(":")[0]))].sort();
+const keys = [...new Set(all.map(groupOf))].sort();
 keys.forEach((k) => {
   const o = el("option", k);
   o.value = k;
@@ -391,12 +464,25 @@ function showDebt(f) {
     el("span", fmt(f.cost) + " TDC", "tag number"),
     el("span", f.rule, "tag mono")
   );
+  if (f.category) body.append(el("span", f.category, "tag"));
   if (f.severity) body.append(el("span", f.severity, "tag"));
   body.append(
-    el("p", f.file + (f.line ? ":" + f.line : ""), "mono"),
+    el("p", where(f), "mono"),
     el("pre", f.snippet || "No source snippet available."),
     el("p", "Finding ID: " + f.id, "muted mono")
   );
+  if (measured(f) && !f.line)
+    body.append(el("p", "Line not found in the current source: the file changed since the scan.", "muted"));
+  /* only web links: the url comes from the catalog, a file of the repository */
+  if (f.url && /^https?:/i.test(f.url)) {
+    const link = el("a", "Rule documentation");
+    link.href = f.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    const p = el("p");
+    p.append(link);
+    body.append(p);
+  }
   body.append(
     measured(f)
       ? el("p", "Bounty: +" + fmt(f.cost) + " coins for the commit that repays it.", "gold")
@@ -426,7 +512,7 @@ function renderRows() {
     .filter(
       (f) =>
         (source === "all" || f.source === source) &&
-        (engine === "all" || f.rule.split(":")[0] === engine) &&
+        (engine === "all" || groupOf(f) === engine) &&
         [f.file, f.rule, f.problem, f.id, f.category || ""].some((s) => s.toLowerCase().includes(q))
     )
     .sort((a, b) =>
@@ -443,9 +529,9 @@ function renderRows() {
       b = el("button", f.problem);
     b.type = "button";
     b.onclick = () => showDebt(f);
-    place.append(b, el("p", f.file + (f.line ? ":" + f.line : ""), "muted mono"));
+    place.append(b, el("p", where(f), "muted mono"));
     const rule = el("td");
-    rule.append(el("p", f.rule, "mono"), el("small", f.source));
+    rule.append(el("p", f.rule, "mono"), el("small", (f.category ? f.category + " · " : "") + f.source));
     const cost = el("td", undefined, "num");
     cost.append(el("span", fmt(f.cost), "number gold"));
     row.append(place, rule, cost);

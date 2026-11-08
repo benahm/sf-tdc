@@ -45,7 +45,8 @@ export const fakeAnalyzer: Analyzer = async (_project, files) => {
       id,
       severity,
       tags: ['Recommended', 'Performance'],
-      description: id,
+      description: `Description of ${id}`,
+      url: `https://example.com/rules/${id}`,
     })),
     violations,
   };

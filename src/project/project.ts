@@ -8,6 +8,7 @@ import { gitRoot } from './git.js';
 export const TDC_DIR = '.tdc';
 export const CONFIG_FILE = 'config.json';
 export const LEDGER_FILE = 'ledger.json';
+export const CATALOG_FILE = 'catalog.json';
 
 export type RuleSetting = {
   enabled?: boolean;
@@ -65,6 +66,8 @@ export type Project = {
   config: TdcConfig;
   configFile: string;
   ledgerFile: string;
+  /** Descriptions of the enabled rules, written with the ledger. */
+  catalogFile: string;
   sourceDirs: string[];
 };
 
@@ -124,6 +127,7 @@ export const loadProject = async (cwd: string, sourceDirs?: string[]): Promise<P
     config,
     configFile,
     ledgerFile: path.join(root, TDC_DIR, LEDGER_FILE),
+    catalogFile: path.join(root, TDC_DIR, CATALOG_FILE),
     sourceDirs: (dirs.length ? dirs : ['force-app']).map((dir) => path.resolve(root, dir)),
   };
 };

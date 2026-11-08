@@ -105,9 +105,9 @@ export const renderDashboard = (data: DashboardData): string => {
               <small>Findings introduced in scored commits</small>
             </div>
             <div class="kpi">
-              <div class="eyebrow">Net change</div>
-              <div class="value number" id="net"></div>
-              <small>New debt minus repayments</small>
+              <div class="eyebrow">Repaying commits</div>
+              <div class="value number" id="repaying"></div>
+              <small>Commits that repaid more debt than they created</small>
             </div>
             <div class="kpi">
               <div class="eyebrow">Coins collected</div>
@@ -151,14 +151,39 @@ export const renderDashboard = (data: DashboardData): string => {
             <section class="panel">
               <div class="panelhead">
                 <div>
-                  <div class="eyebrow">Your next move</div>
-                  <h2>Bounties</h2>
+                  <div class="eyebrow">What the debt is made of</div>
+                  <h2>Debt by category</h2>
                 </div>
-                <span class="tag">1 TDC repaid = 1 <svg class="coinicon" viewBox="0 0 64 64" aria-label="coin" role="img"><use href="#tdc-coin" width="64" height="64" /></svg></span>
+                <span class="tag" id="categorytag">Measured debt</span>
               </div>
-              <div id="next"></div>
+              <div class="categories" id="categories"></div>
+              <p class="muted hint" id="cataloghint" hidden>
+                Rule descriptions and categories come from .tdc/catalog.json, written by sf tdc scan. Run a scan, then
+                regenerate the report.
+              </p>
             </section>
           </div>
+          <section class="panel bountyboard">
+            <div class="panelhead">
+              <div>
+                <div class="eyebrow">Your next move</div>
+                <h2>Bounties</h2>
+              </div>
+              <span class="tag">1 TDC repaid = 1 <svg class="coinicon" viewBox="0 0 64 64" aria-label="coin" role="img"><use href="#tdc-coin" width="64" height="64" /></svg></span>
+            </div>
+            <div class="split inner">
+              <div>
+                <h3>Big bounties</h3>
+                <p class="muted">The most expensive debts, one per file.</p>
+                <div id="next"></div>
+              </div>
+              <div>
+                <h3>Quick fixes</h3>
+                <p class="muted">The cheapest debts, one per rule: 1 TDC is about a minute of work.</p>
+                <div id="quick"></div>
+              </div>
+            </div>
+          </section>
           <section class="panel objective">
             <div>
               <div class="eyebrow">Repayment objective</div>
@@ -193,9 +218,9 @@ export const renderDashboard = (data: DashboardData): string => {
               <option value="code-analyzer">Measured · analyzer</option>
               <option value="agent">Declared · agent</option>
               <option value="human">Declared · human</option></select
-            ><label class="sr" for="engine">Engine or category</label
+            ><label class="sr" for="engine">Category</label
             ><select id="engine">
-              <option value="all">All engines / categories</option></select
+              <option value="all">All categories</option></select
             ><label class="sr" for="sort">Sort debts</label
             ><select id="sort">
               <option value="cost">Highest cost</option>

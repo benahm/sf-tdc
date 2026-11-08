@@ -263,6 +263,30 @@ small, .muted { color: var(--muted); }
 .bounty p, .bounty small { overflow-wrap: anywhere; }
 .bounty p { font-size: 13px; }
 .bounty small { font-size: 12px; }
+.bounty .what { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.bountyboard { margin-top: 20px; }
+.split.inner { margin-top: 0; }
+.split.inner h3 { font-size: 15px; margin: 0; }
+.split.inner > div > p.muted { font-size: 12px; margin: 2px 0 12px; }
+
+/* Debt by category */
+.categories { display: flex; flex-direction: column; gap: 12px; }
+.category {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--raised);
+}
+.category:hover { border-color: var(--gold); }
+.category .row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; margin-bottom: 6px; }
+.category .name { font-weight: 600; }
+.category .track { margin-bottom: 4px; }
+.category small { font-size: 11px; }
+.hint { font-size: 12px; margin-top: 12px; }
+dialog a { color: var(--gold); }
 .reward {
   grid-row: 1 / span 2;
   grid-column: 2;

@@ -13,7 +13,7 @@ export type Finding = LedgerFinding & {
   message: string;
 };
 
-export type RuleInfo = { category: string; summary: string };
+export type RuleInfo = { category: string; severity: string; summary: string; url?: string };
 
 export type ScanResult = {
   findings: Finding[];
@@ -34,6 +34,12 @@ const CODE_FILE = /\.(cls|trigger|js|html|cmp|page|component)$/;
 const CATEGORIES = ['Security', 'Performance', 'ErrorProne', 'BestPractices', 'Design', 'CodeStyle', 'Documentation'];
 
 const sha = (text: string): string => createHash('sha1').update(text).digest('hex').slice(0, 12);
+
+/** The source line of a finding as the ledger stores it: trimmed, its spaces collapsed, cut to a fixed length. */
+export const snippetOf = (line: string): string => line.trim().replace(/\s+/g, ' ').slice(0, SNIPPET_LENGTH);
+
+/** Id of the finding of a file with this hash and this rank among the identical findings of the file. */
+export const findingId = (file: string, hash: string, rank: number): string => sha(`${file}\0${hash}\0${rank}`);
 
 const categoryOf = (rule: AnalyzerRule): string => CATEGORIES.find((tag) => rule.tags.includes(tag)) ?? 'Other';
 
@@ -72,7 +78,12 @@ export const scan = async (project: Project): Promise<ScanResult> => {
   const catalog: Record<string, RuleInfo> = {};
   for (const [id, { rule, cost }] of enabled) {
     rules[id] = cost;
-    catalog[id] = { category: categoryOf(rule), summary: rule.description };
+    catalog[id] = {
+      category: categoryOf(rule),
+      severity: rule.severity,
+      summary: rule.description,
+      ...(rule.url ? { url: rule.url } : {}),
+    };
   }
 
   const violations = analysis.violations
@@ -93,14 +104,14 @@ export const scan = async (project: Project): Promise<ScanResult> => {
     // eslint-disable-next-line no-await-in-loop
     const lines = await linesOf(violation.file);
     const line = violation.line ? (lines[violation.line - 1] ?? '') : '';
-    const snippet = line.trim().replace(/\s+/g, ' ').slice(0, SNIPPET_LENGTH);
+    const snippet = snippetOf(line);
     const hash = sha(`${violation.rule}\0${snippet}`);
     const key = `${violation.relPath}\0${hash}`;
     const rank = ranks.get(key) ?? 0;
     ranks.set(key, rank + 1);
     const { rule, cost } = enabled.get(violation.rule)!;
     findings.push({
-      id: sha(`${key}\0${rank}`),
+      id: findingId(violation.relPath, hash, rank),
       rule: rule.id,
       category: catalog[rule.id].category,
       file: violation.relPath,

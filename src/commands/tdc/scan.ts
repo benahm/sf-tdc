@@ -4,6 +4,7 @@ import path from 'node:path';
 import { Messages } from '@salesforce/core';
 import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 
+import { writeCatalog } from '../../ledger/catalog.js';
 import { readLedger, serializeLedger, writeLedger } from '../../ledger/ledger.js';
 import { loadProject } from '../../project/project.js';
 import { formatNumber, formatPrice, formatTdc, signed } from '../../report/format.js';
@@ -51,6 +52,7 @@ export default class TdcScan extends SfCommand<TdcScanResult> {
     const ledger = toLedger(result);
     const changed = (await readText(project.ledgerFile))?.replace(/\r\n/g, '\n') !== serializeLedger(ledger);
     if (!flags['dry-run'] && changed) await writeLedger(project.ledgerFile, ledger);
+    if (!flags['dry-run']) await writeCatalog(project.catalogFile, result.catalog);
     const report = buildReport(project, result, previous, !flags['dry-run'] && changed);
 
     this.print(report);

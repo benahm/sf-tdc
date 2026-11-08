@@ -166,6 +166,44 @@ describe('dashboard', () => {
     expect(data.declared[0]).to.include({ source: 'agent', cost: 30 });
   });
 
+  it('describes each finding from the catalog that the scan writes, without changing it on a new scan', async () => {
+    const file = path.join(root, '.tdc/catalog.json');
+    const catalog = await readFile(file, 'utf8');
+    expect(catalog).to.include('"pmd:AvoidDebugStatements": {"category":"Performance","severity":"Low"');
+    await TdcScan.run([]);
+    expect(await readFile(file, 'utf8')).to.equal(catalog);
+
+    const data = await dashboardData(await loadProject(root));
+    expect(data.catalog).to.equal(true);
+    expect(data.findings[0]).to.include({
+      problem: 'Description of pmd:AvoidDebugStatements',
+      category: 'Performance',
+      severity: 'Low',
+      url: 'https://example.com/rules/pmd:AvoidDebugStatements',
+      line: 1,
+    });
+
+    await rm(file);
+    const bare = await dashboardData(await loadProject(root));
+    expect(bare.catalog).to.equal(false);
+    expect(bare.findings[0]).to.include({ problem: 'pmd:AvoidDebugStatements', line: 1 });
+    expect(bare.findings[0]).not.to.have.property('category');
+  });
+
+  it('finds the line of each identical finding again by its rank, and none once the source changed', async () => {
+    const debug = "    System.debug('x');";
+    await writeSources(root, {
+      'classes/AccountService.cls': ['class A {', debug, '  void b() {}', debug, '}'].join('\n'),
+    });
+    await TdcScan.run([]);
+    const data = await dashboardData(await loadProject(root));
+    expect(data.findings.map((finding) => finding.line).sort()).to.deep.equal([2, 4]);
+
+    await writeSources(root, { 'classes/AccountService.cls': 'class A {}' });
+    const changed = await dashboardData(await loadProject(root));
+    expect(changed.findings.every((finding) => finding.line === undefined)).to.equal(true);
+  });
+
   it('explains a missing ledger and supports a saved ledger without Git history', async () => {
     await rm(path.join(root, '.tdc/ledger.json'));
     await rm(path.join(root, '.git'), { recursive: true });

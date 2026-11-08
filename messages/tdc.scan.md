@@ -8,6 +8,8 @@ Runs the rules on the source folders (the packageDirectories of sfdx-project.jso
 
 The findings are written to .tdc/ledger.json, one per line and without line numbers, so that editing code around a debt changes nothing. Commit the ledger with your changes: comparing it from commit to commit tells who paid the debt ("sf tdc dashboard").
 
+The category, severity, description and documentation link of every enabled rule are written to .tdc/catalog.json, which "sf tdc dashboard" reads to explain each debt. It changes only with the rules or the engines, and no score depends on it: commit it so that every clone gets the descriptions.
+
 # flags.source-dir.summary
 
 Folder to scan instead of the packageDirectories of sfdx-project.json. Can be repeated.
