@@ -293,6 +293,19 @@ main > section { padding-top: 26px; }
 .legend .target::before { border-color: var(--blue); }
 .statement > *, .split > *, .ledgerline > *, .podium > *, .objective > * { min-width: 0; }
 .split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+.initial-priorities { margin-top: 20px; }
+.initial-priorities ul { list-style: none; margin: 12px 0 0; padding: 0; }
+.initial-priorities li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.initial-priorities li small { display: block; }
+.initial-priorities li .number { white-space: nowrap; }
+#baselinenext { margin-top: 12px; font-size: 13px; }
 
 /* Collection notices: the files that owe the most */
 .notices, .categories { display: flex; flex-direction: column; gap: 2px; margin: 0 -12px; }

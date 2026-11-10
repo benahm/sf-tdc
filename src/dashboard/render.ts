@@ -9,6 +9,8 @@ const scriptData = (data: object): string =>
 
 export const renderDashboard = (data: DashboardData): string => {
   const { overview, details } = dashboardPayload(data);
+  const hasRepaymentHistory = data.forecast !== undefined;
+  const baselineTitle = data.committedDebt === undefined ? 'Initial measurement' : 'Measurement baseline';
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -97,12 +99,19 @@ export const renderDashboard = (data: DashboardData): string => {
                 <div class="eyebrow">Statement of account · measured debt</div>
                 <span class="tag" id="generated"></span>
               </div>
-              <h1>Balance due</h1>
+              <h1>${hasRepaymentHistory ? 'Balance due' : baselineTitle}</h1>
               <div class="balance number" id="outstanding"><b id="outstandingvalue">0</b> <span>TDC</span></div>
               <small id="price"></small><br />
+              <small id="initialcount"${hasRepaymentHistory ? ' hidden' : ''}></small>
               <span class="drift" id="drift" hidden></span>
             </div>
-            <div class="stmt-side">
+            <div class="stmt-side"${hasRepaymentHistory ? ' hidden' : ''}>
+              <div class="eyebrow">Configured scan scope</div>
+              <p class="path mono" id="scopedirs"></p>
+              <small id="scopefiles"></small>
+              <p id="baselinenext"></p>
+            </div>
+            <div class="stmt-side"${hasRepaymentHistory ? '' : ' hidden'}>
               <span class="stamp" id="stamp" hidden></span>
               <div class="eyebrow">Debt-free by</div>
               <div class="freedom number gold" id="freedom"></div>
@@ -111,7 +120,7 @@ export const renderDashboard = (data: DashboardData): string => {
             </div>
           </section>
 
-          <div class="ledgerline">
+          <div class="ledgerline"${hasRepaymentHistory ? '' : ' hidden'}>
             <div class="kpi">
               <div class="eyebrow">Credit · repaid</div>
               <div class="value number paid" id="paid"></div>
@@ -133,7 +142,7 @@ export const renderDashboard = (data: DashboardData): string => {
               <small>Earned by the collectors</small>
             </div>
           </div>
-          <div class="panel">
+          <div class="panel"${hasRepaymentHistory ? '' : ' hidden'}>
             <div class="panelhead">
               <div>
                 <h2>The repayment trajectory</h2>
@@ -155,6 +164,11 @@ export const renderDashboard = (data: DashboardData): string => {
               a break in the ledger history or a change of rules, costs or engines.
             </p>
           </div>
+          <section class="panel initial-priorities"${hasRepaymentHistory ? ' hidden' : ''}>
+            <h2>Top priorities</h2>
+            <p class="muted">Rules ranked by total estimated correction cost.</p>
+            <ul id="toprules"></ul>
+          </section>
           <div class="split">
             <section class="panel">
               <div class="panelhead">

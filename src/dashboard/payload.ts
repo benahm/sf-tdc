@@ -11,6 +11,8 @@ type Payload = {
     rules: Rule[];
     count: number;
     measuredCount: number;
+    affectedFiles: number;
+    topRules: Array<[string, Total]>;
     declaredDebt: number;
     files: Array<[string, Total]>;
     categories: Array<[string, Total]>;
@@ -55,6 +57,7 @@ export const dashboardPayload = ({ findings, declared, ...data }: DashboardData)
   const rules: Rule[] = [];
   const files = new Map<string, Total>();
   const categories = new Map<string, Total>();
+  const ruleTotals = new Map<string, Total>();
   const index = (dictionary: Map<string, number>, value: string): number => {
     const existing = dictionary.get(value);
     if (existing !== undefined) return existing;
@@ -68,6 +71,7 @@ export const dashboardPayload = ({ findings, declared, ...data }: DashboardData)
     const ruleIndex = index(ruleIds, rule);
     if (ruleIndex === rules.length) rules.push({ rule, problem, category, severity, url });
     add(files, file, cost);
+    add(ruleTotals, rule, cost);
     add(categories, category?.length ? category : rule.split(':')[0], cost);
     const row: MeasuredRow = [id, ruleIndex, index(paths, file), index(snippets, snippet), cost];
     if (line !== undefined) row.push(line);
@@ -100,6 +104,8 @@ export const dashboardPayload = ({ findings, declared, ...data }: DashboardData)
       rules,
       count: rows.length + declared.length,
       measuredCount: rows.length,
+      affectedFiles: files.size,
+      topRules: byTotal(ruleTotals).slice(0, 3),
       declaredDebt: totalCost(declared),
       files: byTotal(files).slice(0, 5),
       categories: byTotal(categories),

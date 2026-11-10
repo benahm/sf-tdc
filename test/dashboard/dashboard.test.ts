@@ -48,6 +48,7 @@ describe('dashboard', () => {
     expect(await readFile(ledger, 'utf8')).to.equal(before);
     const html = await readFile(result.file, 'utf8');
     expect(html).to.include('The repayment trajectory').and.include('Content-Security-Policy');
+    expect(html).to.include('<h1>Initial measurement</h1>').and.include('<div class="ledgerline" hidden>');
     const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
     expect(scripts).to.have.length(1);
     expect(() => new Script(scripts[0][1])).not.to.throw();
@@ -86,6 +87,7 @@ describe('dashboard', () => {
     const first = await dashboardData(project);
     expect(first.history[1].paid).to.equal(5);
     expect(first.forecast).not.to.equal(undefined);
+    expect(renderDashboard(first)).to.include('<h1>Balance due</h1>').and.include('<div class="ledgerline">');
     await writeSources(root, { 'classes/AccountService.cls': SOURCE });
     project.config.severityCosts.Low = 10;
     await writeFile(project.configFile, JSON.stringify(project.config));
@@ -94,6 +96,9 @@ describe('dashboard', () => {
     const result = await dashboardData(await loadProject(root));
     expect(result.history[2]).to.include({ kind: 'rules-changed', paid: 0, created: 0, coins: 0 });
     expect(result.forecast).to.equal(undefined);
+    expect(renderDashboard(result))
+      .to.include('<h1>Measurement baseline</h1>')
+      .and.include('<div class="ledgerline" hidden>');
   });
 
   it('ranks the collectors without their emails or the snippets of their commits', async () => {
@@ -143,6 +148,9 @@ describe('dashboard', () => {
     const findingData = JSON.parse(details[1]) as Record<string, unknown>;
     const { id, rule, file, cost, line, problem, severity, category, url } = data.findings[0];
     expect(overview).to.include({ project: attack, count: 2, measuredCount: 2 });
+    expect(overview).to.include({ affectedFiles: 1 });
+    expect(overview.sourceDirs).to.deep.equal(['force-app']);
+    expect(overview.topRules).to.deep.equal([[rule, { count: 2, cost: cost * 2 }]]);
     expect(overview).not.to.have.property('findings');
     expect(overview.rules).to.deep.equal([{ rule, problem, severity, category, url }]);
     expect(overview.categories).to.deep.equal([[category, { count: 2, cost: cost * 2 }]]);

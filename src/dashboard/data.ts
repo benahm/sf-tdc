@@ -40,6 +40,7 @@ export type DashboardPlayer = Pick<
 export type DashboardData = {
   version: number;
   project: string;
+  sourceDirs: string[];
   generatedAt: string;
   branch: string;
   commit?: string;
@@ -188,6 +189,7 @@ export const dashboardData = async (
   return {
     version: 4,
     project: path.basename(project.root),
+    sourceDirs: project.sourceDirs.map((dir) => toPosix(path.relative(project.root, dir) || '.')),
     generatedAt: new Date().toISOString(),
     branch,
     commit,

@@ -147,6 +147,7 @@ text(
   "≈ " + fmt(data.price.manDays) + " workdays · " + money(data.price.amount, data.price.currency) + " at your daily rate"
 );
 (function drift() {
+  if (!data.forecast) return;
   const node = $("drift");
   if (data.committedDebt === undefined) {
     node.textContent = data.history.length ? "" : "Ledger not committed yet · commit it to open the books";
@@ -165,9 +166,31 @@ text(
       ? signed(delta) + " TDC of new debt not committed yet"
       : signed(delta) + " TDC repaid, not committed yet · commit to collect " + fmt(-delta) + " coins";
 })();
+(function baseline() {
+  if (data.forecast) return;
+  text("initialcount", plural(data.measuredCount, "measured finding"));
+  text("scopedirs", data.sourceDirs.join(", "));
+  text("scopefiles", plural(data.affectedFiles, "file") + " with findings");
+  text("baselinenext", data.committedDebt === undefined
+    ? "Commit the ledger to record this baseline."
+    : "Commit another comparable ledger to see repayment trends.");
+  const list = $("toprules");
+  if (!data.topRules.length) {
+    list.replaceWith(el("p", "No measured debt.", "muted"));
+    return;
+  }
+  for (const [rule, total] of data.topRules) {
+    const row = el("li");
+    const description = el("div");
+    description.append(el("strong", rule, "path mono"), el("small", plural(total.count, "finding")));
+    row.append(description, el("span", fmt(total.cost) + " TDC", "gold number"));
+    list.append(row);
+  }
+})();
 (function payoff() {
   const f = data.forecast,
     stamp = $("stamp");
+  if (!f) return;
   const setStamp = (label, tone) => {
     stamp.textContent = label;
     stamp.className = "stamp " + tone;
@@ -177,11 +200,6 @@ text(
     text("freedom", "Today");
     text("pace", "No measured debt. Keep the books clean.");
     setStamp("Paid in full", "good");
-    return;
-  }
-  if (!f) {
-    text("freedom", "Not enough history");
-    text("pace", "A forecast needs at least two commits in the same measurement baseline.");
     return;
   }
   if (f.payoffDate) {
@@ -236,6 +254,7 @@ function niceStep(max) {
   return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag;
 }
 function draw() {
+  if (!data.forecast) return;
   const events = visibleHistory();
   totals(events);
   const host = $("chart");
