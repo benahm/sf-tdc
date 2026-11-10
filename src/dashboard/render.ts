@@ -57,42 +57,42 @@ export const renderDashboard = (data: DashboardData): string => {
       <header class="top">
         <div class="brand"><svg class="coin" viewBox="0 0 64 64" aria-hidden="true"><use href="#tdc-coin" width="64" height="64" /></svg><span class="brandname">TDC<small class="muted">Technical Debt Collector</small></span></div>
         <span class="project" id="project"></span><span class="tag mono" id="branch"></span>
-        <button class="right" id="theme" type="button">Switch theme</button>
+        <nav class="nav" aria-label="Dashboard views">
+          <button type="button" data-tab="overview" aria-controls="overview" aria-pressed="true">Overview</button>
+          <button type="button" data-tab="debts" aria-controls="debts" aria-pressed="false">
+            Debts <span class="count" id="debtcount"></span>
+          </button>
+          <button type="button" data-tab="collectors" aria-controls="collectors" aria-pressed="false">
+            Collectors <span class="count" id="collectorcount"></span>
+          </button>
+          <button type="button" data-tab="activity" aria-controls="activity" aria-pressed="false">Statement</button>
+        </nav>
+        <span class="minibalance number" id="minibalance" hidden></span>
+        <button id="theme" type="button">Switch theme</button>
       </header>
-
-      <section class="statement" aria-label="Statement of account">
-        <div class="stmt-main">
-          <div class="stmt-head">
-            <div class="eyebrow">Statement of account · measured debt</div>
-            <span class="tag" id="generated"></span>
-          </div>
-          <h1>Balance due</h1>
-          <div class="balance number" id="outstanding"><b id="outstandingvalue">0</b> <span>TDC</span></div>
-          <small id="price"></small><br />
-          <span class="drift" id="drift" hidden></span>
-        </div>
-        <div class="stmt-side">
-          <span class="stamp" id="stamp" hidden></span>
-          <div class="eyebrow">Debt-free by</div>
-          <div class="freedom number gold" id="freedom"></div>
-          <small id="pace"></small>
-          <small class="muted">Linear estimate on committed ledgers, not a delivery commitment.</small>
-        </div>
-      </section>
-
-      <nav class="nav" aria-label="Dashboard views">
-        <button type="button" data-tab="overview" aria-controls="overview" aria-pressed="true">Overview</button>
-        <button type="button" data-tab="debts" aria-controls="debts" aria-pressed="false">
-          Debts <span id="debtcount"></span>
-        </button>
-        <button type="button" data-tab="collectors" aria-controls="collectors" aria-pressed="false">
-          Collectors <span id="collectorcount"></span>
-        </button>
-        <button type="button" data-tab="activity" aria-controls="activity" aria-pressed="false">Statement</button>
-      </nav>
 
       <main>
         <section id="overview" aria-label="Overview">
+          <section class="statement" aria-label="Statement of account">
+            <div class="stmt-main">
+              <div class="stmt-head">
+                <div class="eyebrow">Statement of account · measured debt</div>
+                <span class="tag" id="generated"></span>
+              </div>
+              <h1>Balance due</h1>
+              <div class="balance number" id="outstanding"><b id="outstandingvalue">0</b> <span>TDC</span></div>
+              <small id="price"></small><br />
+              <span class="drift" id="drift" hidden></span>
+            </div>
+            <div class="stmt-side">
+              <span class="stamp" id="stamp" hidden></span>
+              <div class="eyebrow">Debt-free by</div>
+              <div class="freedom number gold" id="freedom"></div>
+              <small id="pace"></small>
+              <small class="muted">Linear estimate on committed ledgers, not a delivery commitment.</small>
+            </div>
+          </section>
+
           <div class="ledgerline">
             <div class="kpi">
               <div class="eyebrow">Credit · repaid</div>
@@ -128,9 +128,9 @@ export const renderDashboard = (data: DashboardData): string => {
               </div>
             </div>
             <div id="chart"></div>
-            <div class="legend">
-              <span>Measured debt</span><span class="reference">Balance baseline</span
-              ><span class="target">Goal</span>
+            <div class="legend" id="legend">
+              <span>Measured debt</span><span class="reference">New baseline</span
+              ><span class="target" id="legendgoal">Goal</span>
             </div>
             <p class="muted" style="font-size: 12px; margin-top: 10px">
               Debt written off with deleted files lowers the balance. Gaps mark a new baseline after a merge,
@@ -218,14 +218,17 @@ export const renderDashboard = (data: DashboardData): string => {
               <option value="code-analyzer">Measured · analyzer</option>
               <option value="agent">Declared · agent</option>
               <option value="human">Declared · human</option></select
+            ><label class="sr" for="severity">Severity</label
+            ><select id="severity">
+              <option value="all">All severities</option></select
             ><label class="sr" for="engine">Category</label
             ><select id="engine">
               <option value="all">All categories</option></select
             ><label class="sr" for="sort">Sort debts</label
             ><select id="sort">
               <option value="cost">Highest cost</option>
-              <option value="file">File name</option>
-            </select>
+              <option value="file">File name</option></select
+            ><button type="button" id="reset" hidden>Clear filters</button>
           </div>
           <p id="results" class="muted" aria-live="polite"></p>
           <div class="tablewrap">
@@ -234,6 +237,7 @@ export const renderDashboard = (data: DashboardData): string => {
                 <tr>
                   <th scope="col">Finding / file</th>
                   <th scope="col">Rule / source</th>
+                  <th scope="col">Severity</th>
                   <th scope="col" class="num">TDC</th>
                 </tr>
               </thead>
@@ -304,11 +308,13 @@ export const renderDashboard = (data: DashboardData): string => {
       </footer>
     </div>
     <dialog id="detail" aria-labelledby="detailtitle">
-      <header>
-        <h2 id="detailtitle"></h2>
-        <button type="button" id="close">Close</button>
-      </header>
-      <div id="detailbody"></div>
+      <div class="sheet">
+        <header>
+          <h2 id="detailtitle"></h2>
+          <button type="button" id="close" aria-label="Close">✕</button>
+        </header>
+        <div id="detailbody"></div>
+      </div>
     </dialog>
     <script id="tdc-data" type="application/json">
       ${json}

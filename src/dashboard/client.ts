@@ -46,20 +46,66 @@ const all = [...data.findings, ...data.declared];
 const measured = (f) => f.source === "code-analyzer";
 /* The category of the rule from the catalog, or its engine when the catalog is missing */
 const groupOf = (f) => f.category || f.rule.split(":")[0];
-const where = (f) => f.file + (f.line ? ":" + f.line : "");
+/* A path that wraps at its slashes, the file name standing out from its folders */
+function pathNode(file, line) {
+  const cut = file.lastIndexOf("/"),
+    node = el("span", undefined, "path mono");
+  if (cut >= 0) {
+    const dir = el("span", undefined, "dir");
+    file
+      .slice(0, cut)
+      .split("/")
+      .forEach((part) => dir.append(part + "/", document.createElement("wbr")));
+    node.append(dir);
+  }
+  node.append(el("span", file.slice(cut + 1) + (line ? ":" + line : ""), "base"));
+  return node;
+}
+const SEVERITIES = ["Critical", "High", "Moderate", "Low", "Info"];
+const severityNode = (severity) =>
+  el("span", severity, "sev" + (SEVERITIES.includes(severity) ? " sev-" + severity.toLowerCase() : ""));
+const plural = (n, word) => fmt(n) + " " + word + (n === 1 ? "" : "s");
+/* Rows open their detail from anywhere; the button inside keeps them reachable from the keyboard */
+function clickable(row, open) {
+  row.classList.add("click");
+  row.onclick = open;
+}
 let period = 0,
   page = 0,
   eventLimit = 30;
 
 /* Tabs and theme */
 const TABS = ["overview", "debts", "collectors", "activity"];
+/* The browser may refuse storage to a local file: the report works without it */
+const remember = (key, value) => {
+  try {
+    localStorage.setItem("tdc-" + key, value);
+  } catch {}
+};
+const recall = (key) => {
+  try {
+    return localStorage.getItem("tdc-" + key);
+  } catch {
+    return null;
+  }
+};
+const fromHash = () => location.hash.slice(2);
 function tab(name) {
   for (const n of TABS) $(n).hidden = n !== name;
   document.querySelectorAll("[data-tab]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tab === name)));
+  /* the statement heads the overview: elsewhere the bar keeps the balance in sight */
+  $("minibalance").hidden = name === "overview";
+  /* "#/debts", not "#debts": the browser would scroll the section under the sticky bar */
+  if (fromHash() !== name && (name !== "overview" || location.hash)) window.history.replaceState(null, "", "#/" + name);
+  window.scrollTo(0, 0);
   if (name === "overview") draw();
 }
 document.querySelectorAll("[data-tab]").forEach((b) => (b.onclick = () => tab(b.dataset.tab)));
-let light = window.matchMedia("(prefers-color-scheme: light)").matches;
+window.addEventListener("hashchange", () => {
+  if (TABS.includes(fromHash())) tab(fromHash());
+});
+const saved = recall("theme");
+let light = saved ? saved === "light" : window.matchMedia("(prefers-color-scheme: light)").matches;
 function theme() {
   document.documentElement.dataset.theme = light ? "light" : "dark";
   text("theme", light ? "Dark theme" : "Light theme");
@@ -67,6 +113,7 @@ function theme() {
 theme();
 $("theme").onclick = () => {
   light = !light;
+  remember("theme", light ? "light" : "dark");
   theme();
 };
 
@@ -74,8 +121,11 @@ $("theme").onclick = () => {
 text("project", data.project);
 text("branch", data.branch + (data.commit ? " · " + data.commit : ""));
 text("generated", "Statement date · " + date(data.generatedAt));
-text("debtcount", "(" + all.length + ")");
-text("collectorcount", "(" + data.players.length + ")");
+text("debtcount", fmt(all.length));
+text("collectorcount", fmt(data.players.length));
+text("minibalance", fmt(data.debt) + " TDC");
+$("minibalance").title = "Balance due";
+if (data.debt === 0) $("minibalance").classList.add("zero");
 
 /* Statement of account */
 function countUp(node, value) {
@@ -168,8 +218,8 @@ function totals(events) {
   const paid = events.reduce((s, e) => s + e.paid, 0),
     created = events.reduce((s, e) => s + e.created, 0),
     coins = events.reduce((s, e) => s + e.coins, 0);
-  text("paid", "−" + fmt(paid));
-  text("created", "+" + fmt(created));
+  text("paid", paid ? "−" + fmt(paid) : "0");
+  text("created", created ? "+" + fmt(created) : "0");
   const scored = events.filter((e) => e.kind === "scored"),
     repaying = scored.filter((e) => e.paid > e.created).length;
   text("repaying", fmt(repaying) + " / " + fmt(scored.length));
@@ -179,54 +229,52 @@ function totals(events) {
   $("coins").append(" ", coin());
   $("coins").className = "value number " + (coins < 0 ? "created" : "gold");
 }
+const compact = (n) => new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(n);
+/* A round step for about four graduations */
+function niceStep(max) {
+  const raw = max / 4,
+    mag = Math.pow(10, Math.floor(Math.log10(raw))),
+    n = raw / mag;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag;
+}
 function draw() {
   const events = history();
   totals(events);
   const host = $("chart");
   host.replaceChildren();
+  $("legend").hidden = !events.length;
+  $("legendgoal").hidden = !data.goal;
   if (!events.length) {
     host.append(el("p", "No committed ledger in this period. Commit a ledger to start tracking repayments.", "empty"));
     return;
   }
   const w = Math.max(host.clientWidth, 250),
-    h = 260,
-    left = 58,
-    right = 22,
-    top = 28,
-    bottom = 42,
-    max = Math.max(events.reduce((m, e) => Math.max(m, e.debt), 1), data.goal ? data.goal.debt : 0) * 1.12,
+    h = 280,
+    left = 52,
+    right = 16,
+    top = 26,
+    bottom = 38,
+    floor = h - bottom,
+    peak = Math.max(events.reduce((m, e) => Math.max(m, e.debt), 1), data.goal ? data.goal.debt : 0),
+    step = niceStep(peak * 1.05),
+    max = Math.ceil((peak * 1.05) / step) * step,
     x = (i) => left + (w - left - right) * (events.length === 1 ? 0.5 : i / (events.length - 1)),
-    y = (n) => h - bottom - ((h - top - bottom) * n) / max;
+    y = (n) => floor - ((floor - top) * n) / max;
   const svg = svgEl("svg", {
     viewBox: "0 0 " + w + " " + h,
     class: "chart",
-    role: "img",
+    role: "group",
     "aria-label": "Committed technical debt in TDC, in commit order. Baseline changes interrupt the line.",
   });
-  svg.append(svgEl("title", {}, "Debt by commit · TDC"));
-  for (let i = 0; i < 4; i++) {
-    const v = (max * i) / 3,
-      yy = y(v);
-    svg.append(svgEl("line", { x1: left, y1: yy, x2: w - right, y2: yy, class: "grid" }));
-    svg.append(
-      svgEl(
-        "text",
-        { x: left - 9, y: yy + 4, "text-anchor": "end" },
-        new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(v)
-      )
-    );
+  for (let v = 0; v <= max + step / 2; v += step) {
+    svg.append(svgEl("line", { x1: left, y1: y(v), x2: w - right, y2: y(v), class: v ? "grid" : "grid axis" }));
+    svg.append(svgEl("text", { x: left - 9, y: y(v) + 4, "text-anchor": "end" }, compact(v)));
   }
-  svg.append(svgEl("text", { x: left, y: 13 }, "TDC"));
-  if (data.goal) {
-    svg.append(
-      svgEl("line", { x1: left, y1: y(data.goal.debt), x2: w - right, y2: y(data.goal.debt), class: "goal" })
-    );
-  }
+  svg.append(svgEl("text", { x: left, y: 12 }, "TDC"));
   let points = [];
   function segment() {
     if (points.length) {
-      const floor = h - bottom,
-        first = points[0],
+      const first = points[0],
         last = points[points.length - 1];
       const area = [first[0] + "," + floor, ...points.map((p) => p.join(",")), last[0] + "," + floor];
       svg.append(svgEl("polygon", { points: area.join(" "), class: "area" }));
@@ -237,34 +285,124 @@ function draw() {
   events.forEach((e, i) => {
     if (e.kind !== "scored") {
       segment();
-      svg.append(svgEl("line", { x1: x(i), y1: top, x2: x(i), y2: h - bottom, class: "baseline" }));
+      svg.append(svgEl("line", { x1: x(i), y1: top, x2: x(i), y2: floor, class: "baseline" }));
     }
     points.push([x(i), y(e.debt)]);
   });
   segment();
-  events.forEach((e, i) => {
-    const c = svgEl("circle", { cx: x(i), cy: y(e.debt), r: events.length > 150 ? 2 : 4, fill: "var(--gold)" });
-    c.append(
-      svgEl("title", {}, date(e.date) + " · " + e.sha.slice(0, 7) + " · " + fmt(e.debt) + " TDC · " + e.subject)
+  if (data.goal) {
+    const gy = y(data.goal.debt);
+    svg.append(svgEl("line", { x1: left, y1: gy, x2: w - right, y2: gy, class: "goal" }));
+    svg.append(
+      svgEl("text", { x: w - right, y: gy - 6, "text-anchor": "end", class: "goallabel" }, "Goal · " + fmt(data.goal.debt))
     );
-    svg.append(c);
+  }
+  /* every commit as a dot while they stay readable, the latest one always */
+  const lastIndex = events.length - 1;
+  events.forEach((e, i) => {
+    if (events.length <= 40 || i === lastIndex)
+      svg.append(svgEl("circle", { cx: x(i), cy: y(e.debt), r: i === lastIndex ? 4.5 : 3, class: "dot" }));
   });
-  const labels = w < 440 ? [0, events.length - 1] : [0, Math.floor((events.length - 1) / 2), events.length - 1];
+  const labels = w < 440 ? [0, lastIndex] : [0, Math.floor(lastIndex / 2), lastIndex];
   [...new Set(labels)].forEach((i) =>
     svg.append(
       svgEl(
         "text",
         {
           x: x(i),
-          y: h - 12,
-          "text-anchor":
-            events.length === 1 ? "middle" : i === 0 ? "start" : i === events.length - 1 ? "end" : "middle",
+          y: h - 10,
+          "text-anchor": events.length === 1 ? "middle" : i === 0 ? "start" : i === lastIndex ? "end" : "middle",
         },
         date(events[i].date)
       )
     )
   );
-  host.append(svg);
+
+  /* Reading a commit: the pointer or the arrow keys move the cursor, a click or Enter opens the commit */
+  const cursor = svgEl("line", { y1: top, y2: floor, class: "cursor", visibility: "hidden" }),
+    marker = svgEl("circle", { r: 5.5, class: "marker", visibility: "hidden" }),
+    hit = svgEl("rect", {
+      x: left,
+      y: top,
+      width: w - left - right,
+      height: floor - top,
+      class: "hit",
+      tabindex: 0,
+      role: "slider",
+      "aria-label": "Commit of the trajectory. Arrow keys move, Enter opens the commit.",
+      "aria-valuemin": 0,
+      "aria-valuemax": lastIndex,
+    }),
+    tip = el("div", undefined, "tip");
+  tip.hidden = true;
+  let current = -1;
+  function point(i) {
+    current = Math.max(0, Math.min(lastIndex, i));
+    const e = events[current],
+      scale = svg.getBoundingClientRect().width / w || 1;
+    cursor.setAttribute("x1", x(current));
+    cursor.setAttribute("x2", x(current));
+    marker.setAttribute("cx", x(current));
+    marker.setAttribute("cy", y(e.debt));
+    cursor.setAttribute("visibility", "visible");
+    marker.setAttribute("visibility", "visible");
+    const change = el("div", e.kind === "scored" ? undefined : balanceEventLabel(e.kind), "muted");
+    if (e.kind === "scored") {
+      change.append(
+        el("span", e.paid ? "−" + fmt(e.paid) : "0", e.paid ? "paid" : ""),
+        " repaid · ",
+        el("span", e.created ? "+" + fmt(e.created) : "0", e.created ? "created" : ""),
+        " new"
+      );
+    }
+    const title = fmt(e.debt) + " TDC";
+    tip.replaceChildren(
+      el("small", date(e.date) + " · " + e.sha.slice(0, 7)),
+      el("strong", title, "number"),
+      el("div", e.subject, "subject"),
+      change
+    );
+    tip.hidden = false;
+    hit.setAttribute("aria-valuenow", current);
+    hit.setAttribute("aria-valuetext", date(e.date) + ", " + title + ", " + e.subject);
+    const half = tip.offsetWidth / 2,
+      cx = Math.max(half, Math.min(host.clientWidth - half, x(current) * scale)),
+      above = y(e.debt) * scale - tip.offsetHeight - 14;
+    tip.style.left = cx + "px";
+    tip.style.top = (above < 0 ? y(e.debt) * scale + 14 : above) + "px";
+  }
+  function leave() {
+    current = -1;
+    tip.hidden = true;
+    cursor.setAttribute("visibility", "hidden");
+    marker.setAttribute("visibility", "hidden");
+  }
+  hit.addEventListener("pointermove", (ev) => {
+    const box = svg.getBoundingClientRect(),
+      px = ((ev.clientX - box.left) / (box.width || 1)) * w;
+    point(events.length === 1 ? 0 : Math.round(((px - left) / (w - left - right)) * lastIndex));
+  });
+  hit.addEventListener("pointerleave", () => {
+    if (document.activeElement !== hit) leave();
+  });
+  hit.addEventListener("blur", leave);
+  hit.addEventListener("focus", () => {
+    if (current < 0) point(lastIndex);
+  });
+  hit.addEventListener("keydown", (ev) => {
+    if (ev.key === "ArrowLeft") point(current - 1);
+    else if (ev.key === "ArrowRight") point(current + 1);
+    else if (ev.key === "Home") point(0);
+    else if (ev.key === "End") point(lastIndex);
+    else if (ev.key === "Enter" && current >= 0) showCommit(events[current]);
+    else return;
+    ev.preventDefault();
+  });
+  hit.addEventListener("click", () => {
+    if (current >= 0) showCommit(events[current]);
+  });
+  svg.append(cursor, marker, hit);
+  host.append(svg, tip);
 }
 document.querySelectorAll("[data-days]").forEach(
   (b) =>
@@ -294,8 +432,8 @@ debtors.forEach(([file, o], i) => {
   b.type = "button";
   const row = el("div", undefined, "row");
   const who = el("div", undefined, "who");
-  who.append(el("small", "Notice #" + (i + 1) + " · " + o.count + (o.count === 1 ? " finding" : " findings")));
-  who.append(el("div", file, "mono"));
+  who.append(el("small", "Notice #" + (i + 1) + " · " + plural(o.count, "finding")));
+  who.append(pathNode(file));
   row.append(who, el("span", "owes " + fmt(o.cost) + " TDC", "owed number"));
   const hp = el("div", undefined, "hp"),
     track = el("div", undefined, "track"),
@@ -308,6 +446,7 @@ debtors.forEach(([file, o], i) => {
     $("search").value = file;
     $("source").value = "code-analyzer";
     $("engine").value = "all";
+    $("severity").value = "all";
     page = 0;
     renderRows();
     tab("debts");
@@ -341,12 +480,13 @@ debtors.forEach(([file, o], i) => {
       fill = el("div", undefined, "fill");
     fill.style.width = (g.cost / Math.max(top, 1)) * 100 + "%";
     track.append(fill);
-    b.append(head, track, el("small", g.count + (g.count === 1 ? " finding" : " findings"), "muted"));
+    b.append(head, track, el("small", plural(g.count, "finding"), "muted"));
     b.setAttribute("aria-label", name + ": " + fmt(g.cost) + " TDC in " + g.count + " findings. Show these debts.");
     b.onclick = () => {
       $("search").value = "";
       $("source").value = "code-analyzer";
       $("engine").value = name;
+      $("severity").value = "all";
       page = 0;
       renderRows();
       tab("debts");
@@ -364,7 +504,7 @@ function bountyCard(f) {
   const what = el("div", undefined, "what");
   what.append(el("p", f.problem));
   if (f.problem !== f.rule) what.append(el("small", f.rule, "mono"));
-  what.append(el("small", where(f), "mono muted"));
+  what.append(pathNode(f.file, f.line));
   b.append(what, reward);
   b.onclick = () => showDebt(f);
   return b;
@@ -393,7 +533,8 @@ const quick = pick(
 );
 if (!big.length) $("next").append(el("p", "No bounty left. Every measured debt is repaid.", "empty"));
 big.forEach((f) => $("next").append(bountyCard(f)));
-if (big.length && !quick.length) $("quick").append(el("p", "Every rule is already in the big bounties.", "empty"));
+if (!quick.length)
+  $("quick").append(el("p", big.length ? "Every rule is already in the big bounties." : "Nothing left to fix.", "empty"));
 quick.forEach((f) => $("quick").append(bountyCard(f)));
 
 /* Objective: progress toward the goal */
@@ -454,6 +595,11 @@ keys.forEach((k) => {
   o.value = k;
   $("engine").append(o);
 });
+SEVERITIES.filter((name) => all.some((f) => f.severity === name)).forEach((name) => {
+  const o = el("option", name);
+  o.value = name;
+  $("severity").append(o);
+});
 text("declaredtotal", fmt(data.declared.reduce((s, d) => s + d.cost, 0)) + " declared TDC · outside balance");
 function showDebt(f) {
   text("detailtitle", f.problem);
@@ -465,12 +611,10 @@ function showDebt(f) {
     el("span", f.rule, "tag mono")
   );
   if (f.category) body.append(el("span", f.category, "tag"));
-  if (f.severity) body.append(el("span", f.severity, "tag"));
-  body.append(
-    el("p", where(f), "mono"),
-    el("pre", f.snippet || "No source snippet available."),
-    el("p", "Finding ID: " + f.id, "muted mono")
-  );
+  if (f.severity) body.append(severityNode(f.severity));
+  const place = el("p");
+  place.append(pathNode(f.file, f.line));
+  body.append(place, el("pre", f.snippet || "No source snippet available."), el("p", "Finding ID: " + f.id, "muted mono"));
   if (measured(f) && !f.line)
     body.append(el("p", "Line not found in the current source: the file changed since the scan.", "muted"));
   /* only web links: the url comes from the catalog, a file of the repository */
@@ -489,29 +633,38 @@ function showDebt(f) {
       : el("p", "No bounty: declared debt is outside the ledger and coin calculations.", "muted")
   );
   const command = "sf tdc check --id " + f.id;
-  body.append(el("pre", command));
-  const copy = el("button", "Copy verification command");
+  const copy = el("button", "Copy");
   copy.type = "button";
+  copy.setAttribute("aria-label", "Copy the verification command");
   copy.onclick = async () => {
     try {
       await navigator.clipboard.writeText(command);
       copy.textContent = "Copied";
     } catch {
-      copy.textContent = "Select and copy the command above";
+      copy.textContent = "Select the command to copy it";
     }
   };
-  body.append(copy);
+  const verify = el("div", undefined, "command");
+  verify.append(el("pre", command), copy);
+  body.append(el("h3", "Check that it is repaid"), verify);
   $("detail").showModal();
 }
 $("close").onclick = () => $("detail").close();
+/* a click on the backdrop lands on the dialog itself: its content lives in the sheet */
+$("detail").addEventListener("click", (ev) => {
+  if (ev.target === $("detail")) $("detail").close();
+});
 function renderRows() {
   const q = $("search").value.toLowerCase(),
     source = $("source").value,
+    severity = $("severity").value,
     engine = $("engine").value;
+  $("reset").hidden = !q && source === "all" && severity === "all" && engine === "all";
   const matching = all
     .filter(
       (f) =>
         (source === "all" || f.source === source) &&
+        (severity === "all" || f.severity === severity) &&
         (engine === "all" || groupOf(f) === engine) &&
         [f.file, f.rule, f.problem, f.id, f.category || ""].some((s) => s.toLowerCase().includes(q))
     )
@@ -528,26 +681,31 @@ function renderRows() {
       place = el("td"),
       b = el("button", f.problem);
     b.type = "button";
-    b.onclick = () => showDebt(f);
-    place.append(b, el("p", where(f), "muted mono"));
+    clickable(row, () => showDebt(f));
+    place.append(b, el("br"), pathNode(f.file, f.line));
     const rule = el("td");
-    rule.append(el("p", f.rule, "mono"), el("small", (f.category ? f.category + " · " : "") + f.source));
+    rule.append(
+      el("p", f.rule, "mono"),
+      el("small", (f.category ? f.category + " · " : "") + (measured(f) ? "measured" : "declared by " + f.source))
+    );
+    const level = el("td");
+    level.append(f.severity ? severityNode(f.severity) : el("span", "—", "muted"));
     const cost = el("td", undefined, "num");
     cost.append(el("span", fmt(f.cost), "number gold"));
-    row.append(place, rule, cost);
+    row.append(place, rule, level, cost);
     $("rows").append(row);
   });
   if (!matching.length) {
-    const td = el("td", "No debts match these filters.", "empty");
-    td.colSpan = 3;
+    const td = el("td", all.length ? "No debts match these filters." : "No debt on the books.", "empty");
+    td.colSpan = 4;
     const tr = el("tr");
     tr.append(td);
     $("rows").append(tr);
   }
   text(
     "results",
-    fmt(matching.length) +
-      " findings · " +
+    plural(matching.length, "finding") +
+      " · " +
       fmt(matching.filter(measured).reduce((s, f) => s + f.cost, 0)) +
       " measured TDC · " +
       fmt(matching.filter((f) => !measured(f)).reduce((s, f) => s + f.cost, 0)) +
@@ -557,7 +715,13 @@ function renderRows() {
   $("previous").disabled = page === 0;
   $("nextpage").disabled = page === pages - 1;
 }
-for (const id of ["search", "source", "engine", "sort"])
+$("reset").onclick = () => {
+  $("search").value = "";
+  for (const id of ["source", "severity", "engine"]) $(id).value = "all";
+  page = 0;
+  renderRows();
+};
+for (const id of ["search", "source", "severity", "engine", "sort"])
   $(id).addEventListener(id === "search" ? "input" : "change", () => {
     page = 0;
     renderRows();
@@ -596,7 +760,7 @@ renderRows();
     const row = el("tr");
     row.append(el("td", String(i + 1), "number"));
     const who = el("td");
-    who.append(el("strong", p.author), el("br"), el("small", p.commits + (p.commits === 1 ? " commit" : " commits")));
+    who.append(el("strong", p.author), el("br"), el("small", plural(p.commits, "commit")));
     const rank = el("td", undefined, "rankbar");
     rank.append(el("div", p.rank));
     if (p.nextRank) {
@@ -636,9 +800,13 @@ function showCommit(e) {
     ["New debt", e.createdFindings],
   ]) {
     body.append(el("h3", label + " · " + list.length));
-    list
-      .slice(0, 100)
-      .forEach((f) => body.append(el("p", f.rule + " · " + f.file + " · " + fmt(f.cost) + " TDC", "mono")));
+    list.slice(0, 100).forEach((f) => {
+      const line = el("div", undefined, "change"),
+        what = el("div");
+      what.append(el("div", f.rule, "mono"), pathNode(f.file));
+      line.append(what, el("span", fmt(f.cost) + " TDC", "number"));
+      body.append(line);
+    });
     if (list.length > 100) body.append(el("p", "Showing the first 100 findings."));
   }
   body.append(
@@ -669,7 +837,7 @@ function renderEvents() {
       const info = el("td"),
         b = el("button", e.subject);
       b.type = "button";
-      b.onclick = () => showCommit(e);
+      clickable(row, () => showCommit(e));
       info.append(b, el("br"), el("small", (e.author ? e.author + " · " : "") + e.sha.slice(0, 7)));
       if (!scored) info.append(el("p", balanceEventLabel(e.kind), "gold"));
       if (e.deleted) info.append(el("p", fmt(e.deleted) + " TDC written off with deleted files", "muted"));
@@ -696,6 +864,8 @@ $("moreevents").onclick = () => {
   renderEvents();
 };
 renderEvents();
+
+if (TABS.includes(fromHash())) tab(fromHash());
 
 /* Coin rain when the latest committed ledger repaid debt */
 (function rain() {
