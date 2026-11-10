@@ -44,7 +44,7 @@ the [dashboard](./dashboard.md). It changes only with the rules or the engines, 
 | A finding disappeared, its file still exists | **paid** | + its cost |
 | A finding appeared | **created** | − its cost |
 | A finding disappeared and the same one (rule and snippet) appeared in another file | **moved** (rename, refactoring) | 0 |
-| A finding disappeared with its file | **deleted** | 0, unless `game.rewardDeletedFiles` |
+| A finding disappeared with its file | **deleted** | + its cost when `game.rewardDeletedFiles` is `true`, 0 by default |
 
 Some commits never score:
 
@@ -59,6 +59,7 @@ Some commits never score:
 
 A commit that pays debt without updating the ledger gives its TDC to the next commit that does. Run
 `sf tdc scan` before every commit, and [`sf tdc check`](../commands/tdc-check.md) in CI to refuse a stale ledger.
+Use `sf tdc scan -d <folder>` to preview a subset of the source without writing the ledger or the rule catalog.
 
 ## Merge conflicts
 

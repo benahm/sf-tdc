@@ -37,7 +37,7 @@ sf plugins install sf-tdc@beta
 Fair play:
 
 - Debt found again in another file (a rename, a refactoring) is **moved**: neither paid nor created.
-- Deleting a whole file is not a payment, unless `game.rewardDeletedFiles` is `true`.
+- Debt removed with a file is recorded as **deleted**. The dashboard awards coins for it when `game.rewardDeletedFiles` is `true`.
 - The first ledger is the **baseline**, and a commit that changes the rules, their costs or the version of Code
   Analyzer **re-baselines** the debt:
   nobody wins or loses TDC.
@@ -51,7 +51,7 @@ Fair play:
 | Command | |
 | --- | --- |
 | `sf tdc init` | Creates `.tdc/config.json`: `--daily-rate`, `--currency`, `--goal-debt` and `--goal-date`. |
-| `sf tdc scan` | Finds and prices the debt, writes the ledger. `--dry-run`, `--report-file report.md` (every finding with its line), `-d` to scan other folders. |
+| `sf tdc scan` | Finds and prices the debt, writes the ledger. Use `--dry-run` for a preview, `-d` for a preview of selected folders, and `--report-file report.md` for a Markdown report. |
 | `sf tdc dashboard` | Opens an offline dashboard from the ledger and git history, laid out as a bank statement: balance due and payoff date, debt evolution, bounties, collectors and their ranks (or the team total with `game.leaderboard: "team"`), commit by commit. `--output ./report.html` exports without opening a browser. |
 | `sf tdc check` | CI gate: fails when the ledger is out of date, when the debt grew since `--base <ref>` (`HEAD` by default), when a suppression or a change of configuration hid debt, when a debt given with `--id` is not paid, or when it is above `--max-debt`. |
 

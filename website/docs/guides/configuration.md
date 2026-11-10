@@ -30,11 +30,12 @@ title: Configuration
 | `rules.<engine:rule>.enabled` | `true` | `false` disables a rule. |
 | `rules.<engine:rule>.cost` | its severity's | Cost of a finding of this rule, in TDC. |
 | `goal` | none | Debt to reach (`debt`, in TDC) by a date (`date`, `YYYY-MM-DD`), shown by `sf tdc dashboard`. |
-| `game.rewardDeletedFiles` | `false` | Whether deleting a whole file earns the TDC of its debt. |
+| `game.rewardDeletedFiles` | `false` | Award coins for debt removed with deleted files. The current setting applies to the dashboard's full history. |
 | `game.leaderboard` | `named` | `team` sums the collectors of the [dashboard](./dashboard.md) into the team, and leaves the names of the authors out of the report. |
 | `sourceDirs` | `packageDirectories` | Folders to scan, relative to the project root. |
-| `verifier.command` | none | Shell command that answers the prompt verifiers of [declared debt](./ai-agents.md#declare-debt), the prompt on its standard input: `claude -p`, `codex exec -`... |
 | `verifier.runs` | `3` | Times a prompt verifier is asked: every answer must agree. |
+
+Set `TDC_VERIFIER_COMMAND` in your environment to enable prompt verifiers. The command receives the prompt on standard input. See [declared debt](./ai-agents.md#declare-debt).
 
 The `code-analyzer.yml` of the project applies too: its rule overrides (severity, tags), its ignored files and its
 suppressions.

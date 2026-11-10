@@ -23,7 +23,7 @@ import {
   type DeclaredDebt,
   type Verdict,
 } from './declared.js';
-import { unanimous, verify } from './verifier.js';
+import { unanimous, VERIFIER_COMMAND_ENV, verify } from './verifier.js';
 
 /** A debt to fix, whatever found it: enough for an agent to act without reading anything else. */
 export type WorkItem = {
@@ -235,11 +235,12 @@ const baseWarnings = (base: Base | undefined, before: Ledger | undefined, rulesC
 /** The files changed since the base, and the changes that hide debt instead of paying it. */
 const readChanges = async (
   project: Project,
-  base: Base | undefined
+  base: Base | undefined,
+  scannedFiles: string[]
 ): Promise<{ changed: string[]; deleted: Set<string>; cheats: Cheat[] }> => {
   if (!base) return { changed: [], deleted: new Set<string>(), cheats: [] };
-  const { changed, deleted } = await changedFiles(project, base.commit);
-  return { changed, deleted, cheats: await findCheats(project, base.commit, changed) };
+  const files = await changedFiles(project, base.commit);
+  return { ...files, cheats: await findCheats(project, base.commit, files, scannedFiles) };
 };
 
 /** A suppression always fails; a change of configuration fails only when debt disappeared with it. */
@@ -331,7 +332,7 @@ const checkTargets = async (
       } catch (error) {
         // a debt the changes only touched: a CI without an agent still checks the rest
         if (context.asked || !(error instanceof DebtError && error.code === 'NO_VERIFIER_COMMAND')) throw error;
-        warnings.push(`${id} has a prompt verifier, and verifier.command is not configured: it was not checked.`);
+        warnings.push(`${id} has a prompt verifier and was skipped because ${VERIFIER_COMMAND_ENV} is unset.`);
       }
       continue;
     }
@@ -409,7 +410,7 @@ export const checkChanges = async (project: Project, options: CheckOptions = {})
   const before = baseContent === undefined ? undefined : parseLedger(baseContent);
   const rulesChanged = before !== undefined && !sameRules(before, now);
 
-  const { changed, deleted, cheats } = await readChanges(project, base);
+  const { changed, deleted, cheats } = await readChanges(project, base, result.scannedFiles);
   const configChanged = cheats.some((cheat) => cheat.code === 'CONFIG_CHANGED');
   const hidden = (file: string): boolean => configChanged || cheats.some((cheat) => cheat.file === file);
 

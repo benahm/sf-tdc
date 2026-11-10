@@ -1,5 +1,6 @@
 import type { Project } from '../project/project.js';
 import { CATEGORIES, EXPOSURES, IMPACTS, SCOPES, type DebtInput } from './declared.js';
+import { VERIFIER_COMMAND_ENV, verifierCommand } from './verifier.js';
 
 export type Guide = {
   workflows: Record<'fix' | 'declare', string[]>;
@@ -51,7 +52,7 @@ export const buildGuide = (project: Project): Guide => ({
     ],
   },
   rules: [
-    'Never hide debt: no NOPMD, @SuppressWarnings, eslint-disable, nor changes to .forceignore, code-analyzer.yml, sfdx-project.json or .tdc/config.json. sf tdc check fails on them.',
+    'Keep debt visible. sf tdc check detects new suppression markers in scanned files and configuration changes that hide debt.',
     'Deleting a file is not paying its debt.',
     'Do not edit the verifier of a declared debt to make it pass: a person decides on a false positive (sf tdc reject).',
     'Prefer a pattern verifier: it is deterministic. Use a prompt only when no pattern can tell the fix.',
@@ -73,9 +74,9 @@ export const buildGuide = (project: Project): Guide => ({
       prompt:
         'verifier.prompt is a question about the anchored files, answered "present", "fixed" or "unclear" with the code as evidence.',
     },
-    promptVerifier: project.config.verifier
-      ? `Answered by "${project.config.verifier.command}", ${project.config.verifier.runs} times: every answer must agree.`
-      : 'Not configured: set verifier.command in .tdc/config.json to use prompt verifiers.',
+    promptVerifier: verifierCommand()
+      ? `The command in ${VERIFIER_COMMAND_ENV} answers ${project.config.verifier?.runs ?? 3} times. Every answer must agree.`
+      : `Set ${VERIFIER_COMMAND_ENV} in your environment to use prompt verifiers.`,
   },
 });
 

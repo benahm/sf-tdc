@@ -17,6 +17,7 @@ export type RuleInfo = { category: string; severity: string; summary: string; ur
 
 export type ScanResult = {
   findings: Finding[];
+  scannedFiles: string[];
   /** Cost of each enabled rule. */
   rules: Record<string, number>;
   /** Category and description of each enabled rule. */
@@ -123,7 +124,14 @@ export const scan = async (project: Project): Promise<ScanResult> => {
     });
   }
 
-  return { findings, rules, catalog, engines: analysis.engines, linesOfCode: await countLinesOfCode(files, linesOf) };
+  return {
+    findings,
+    scannedFiles: analysis.targetedFiles.map((file) => toPosix(path.relative(project.root, file))),
+    rules,
+    catalog,
+    engines: analysis.engines,
+    linesOfCode: await countLinesOfCode(files, linesOf),
+  };
 };
 
 export const toLedger = (result: ScanResult): Ledger => ({

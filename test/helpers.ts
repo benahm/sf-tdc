@@ -40,6 +40,7 @@ export const fakeAnalyzer: Analyzer = async (_project, files) => {
     });
   }
   return {
+    targetedFiles: files.map((file) => file.path),
     engines: { ...fakeEngines },
     rules: FAKE_RULES.map(({ id, severity }) => ({
       id,

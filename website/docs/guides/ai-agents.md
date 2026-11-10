@@ -90,10 +90,13 @@ is the cost of the severity, as for [the rules](../rules.md).
 | `pattern` | `pattern`, a JavaScript regular expression, matches `file` | yes |
 | `prompt` | the agent command answers `present` to `prompt`, every time, quoting code that is in the files | no |
 
-Prefer a pattern: many problems found by an agent come down to one. A prompt verifier needs `verifier.command` in
-[the configuration](./configuration.md), a command that reads the prompt on its standard input, such as `claude -p`
-or `codex exec -`. It is asked `verifier.runs` times (3 by default): a verdict counts only when all agree, and a
-`present` whose evidence is not in the files is `unclear`.
+Set `TDC_VERIFIER_COMMAND` in your environment to use a prompt verifier. Use a command that reads the prompt on standard
+input, such as `claude -p` or `codex exec -`. This variable replaces the legacy `verifier.command` setting.
+`verifier.runs` in [the configuration](./configuration.md) controls how many answers must agree (three by default).
+A `present` verdict with evidence absent from the files is `unclear`.
+
+With `TDC_VERIFIER_COMMAND` unset, `sf tdc check` warns and skips prompt-verified debts it finds among the touched files.
+An explicit `sf tdc check --id` for such a debt requires the command.
 
 Once declared, the debt is in the queue of `sf tdc next`, and `sf tdc check` marks it `fixed` when its verifier
 finds it gone.

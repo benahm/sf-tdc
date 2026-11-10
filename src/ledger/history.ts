@@ -71,7 +71,17 @@ export const readHistory = async (project: Project, options: { since?: string } 
     const [afterContent, beforeContent, deleted] = await Promise.all([
       showFile(repoRoot, commit.sha, ledgerPath),
       parent ? showFile(repoRoot, parent, ledgerPath) : undefined,
-      git(repoRoot, ['diff-tree', '--root', '--no-commit-id', '-r', '--name-only', '--diff-filter=D', commit.sha]),
+      git(repoRoot, [
+        'diff-tree',
+        '--root',
+        '--no-commit-id',
+        '-r',
+        '--find-renames',
+        '--name-only',
+        '-z',
+        '--diff-filter=D',
+        commit.sha,
+      ]),
     ]);
     // the commit deleted the ledger
     if (afterContent === undefined) return [];
@@ -81,19 +91,19 @@ export const readHistory = async (project: Project, options: { since?: string } 
       beforeContent === undefined ? 'baseline' : sameRules(before, after) ? 'scored' : 'rules-changed';
     const deletedFiles = new Set(
       deleted
-        .split('\n')
+        .split('\0')
         .filter((file) => file && (!prefix || file.startsWith(`${prefix}/`)))
         .map(toProjectPath)
     );
     const changes = compareLedgers(before, after, deletedFiles);
+    const reward = project.config.game.rewardDeletedFiles === true ? totalCost(changes.deleted) : 0;
     return [
       {
         ...commit,
         ...changes,
         kind,
         debt: totalCost(after.findings),
-        // deleting a file is not paying its debt
-        coins: kind === 'scored' ? totalCost(changes.paid) - totalCost(changes.created) : 0,
+        coins: kind === 'scored' ? totalCost(changes.paid) + reward - totalCost(changes.created) : 0,
       },
     ];
   };

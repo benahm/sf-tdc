@@ -7,6 +7,9 @@ import { DebtError, normalize, type DeclaredDebt, type Verdict } from './declare
 
 const TIMEOUT = 10 * 60 * 1000;
 const MAX_FILE_LENGTH = 100_000;
+export const VERIFIER_COMMAND_ENV = 'TDC_VERIFIER_COMMAND';
+
+export const verifierCommand = (): string | undefined => process.env[VERIFIER_COMMAND_ENV]?.trim();
 
 const readSource = async (project: Project, file: string): Promise<string | undefined> => {
   try {
@@ -16,15 +19,15 @@ const readSource = async (project: Project, file: string): Promise<string | unde
   }
 };
 
-/** Runs the agent command of .tdc/config.json with the prompt on its standard input, and returns its output. */
+/** Runs the command supplied by the caller's environment with the prompt on its standard input. */
 const runCommand = (project: Project, prompt: string): Promise<string> => {
-  const command = project.config.verifier?.command;
+  const command = verifierCommand();
   if (!command) {
     return Promise.reject(
       new DebtError(
         'NO_VERIFIER_COMMAND',
-        'a prompt verifier needs the agent command of .tdc/config.json',
-        'Set verifier.command in .tdc/config.json (for instance "claude -p" or "codex exec -"), or use a pattern verifier'
+        `a prompt verifier needs ${VERIFIER_COMMAND_ENV}`,
+        `Set ${VERIFIER_COMMAND_ENV} in your environment (for instance "claude -p" or "codex exec -"), or use a pattern verifier`
       )
     );
   }
@@ -36,7 +39,9 @@ const runCommand = (project: Project, prompt: string): Promise<string> => {
     child.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()));
     child.on('error', reject);
     child.on('close', (code) =>
-      code === 0 ? resolve(stdout) : reject(new Error(`${command} exited with ${code ?? 'a signal'}: ${stderr.trim()}`))
+      code === 0
+        ? resolve(stdout)
+        : reject(new Error(`The verifier command exited with ${code ?? 'a signal'}: ${stderr.trim()}`))
     );
     child.stdin.end(prompt);
   });

@@ -46,20 +46,24 @@ export default class TdcScan extends SfCommand<TdcScanResult> {
 
   public async run(): Promise<TdcScanResult> {
     const { flags } = await this.parse(TdcScan);
-    const project = await loadProject(process.cwd(), flags['source-dir']);
-    const previous = await readLedger(project.ledgerFile);
+    const sourceDirs = flags['source-dir'];
+    const scoped = Boolean(sourceDirs?.length);
+    const dryRun = flags['dry-run'] || scoped;
+    const project = await loadProject(process.cwd(), sourceDirs);
+    const previous = scoped ? undefined : await readLedger(project.ledgerFile);
     const result = await scan(project);
     const ledger = toLedger(result);
-    const changed = (await readText(project.ledgerFile))?.replace(/\r\n/g, '\n') !== serializeLedger(ledger);
-    if (!flags['dry-run'] && changed) await writeLedger(project.ledgerFile, ledger);
-    if (!flags['dry-run']) await writeCatalog(project.catalogFile, result.catalog);
-    const report = buildReport(project, result, previous, !flags['dry-run'] && changed);
+    const ledgerWritten =
+      !dryRun && (await readText(project.ledgerFile))?.replace(/\r\n/g, '\n') !== serializeLedger(ledger);
+    if (ledgerWritten) await writeLedger(project.ledgerFile, ledger);
+    if (!dryRun) await writeCatalog(project.catalogFile, result.catalog);
+    const report = buildReport(project, result, previous, ledgerWritten);
 
     this.print(report);
-    if (flags['dry-run']) {
+    if (dryRun) {
       this.log(messages.getMessage('info.dryRun', [report.ledgerFile]));
     } else {
-      this.log(messages.getMessage(changed ? 'info.ledgerWritten' : 'info.ledgerUnchanged', [report.ledgerFile]));
+      this.log(messages.getMessage(ledgerWritten ? 'info.ledgerWritten' : 'info.ledgerUnchanged', [report.ledgerFile]));
     }
     if (flags['report-file']) {
       await writeFile(path.resolve(flags['report-file']), toMarkdown(report));

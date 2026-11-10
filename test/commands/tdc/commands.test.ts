@@ -72,6 +72,23 @@ describe('tdc commands', () => {
     expect(existsSync(path.join(root, '.tdc/ledger.json'))).to.equal(false);
   });
 
+  it('scan -d previews a subset without rewriting the ledger or catalog', async () => {
+    await writeSources(root, { 'lwc/logger/logger.js': "System.debug('example');" });
+    await TdcScan.run([]);
+    const ledgerFile = path.join(root, '.tdc/ledger.json');
+    const catalogFile = path.join(root, '.tdc/catalog.json');
+    const ledger = await readFile(ledgerFile, 'utf8');
+    await writeFile(catalogFile, '{}');
+
+    const result = await TdcScan.run(['-d', 'force-app/main/default/lwc', '--report-file', 'preview.md']);
+    expect(result.debt).to.equal(5);
+    expect(result.ledgerWritten).to.equal(false);
+    expect(result.sinceLedger).to.equal(undefined);
+    expect(await readFile(ledgerFile, 'utf8')).to.equal(ledger);
+    expect(await readFile(catalogFile, 'utf8')).to.equal('{}');
+    expect(await readFile(path.join(root, 'preview.md'), 'utf8')).to.include('logger.js');
+  });
+
   it('check fails on a missing or stale ledger, and on debt growing since the base', async () => {
     expect((await TdcCheck.run([])).failures).to.have.length(1);
     expect(process.exitCode).to.equal(1);

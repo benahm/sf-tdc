@@ -31,6 +31,8 @@ export type AnalyzerViolation = {
 };
 
 export type Analysis = {
+  /** Absolute paths targeted by the workspace after file ignores. */
+  targetedFiles: string[];
   /** Version of code-analyzer and of each engine that ran: a new version can find other violations. */
   engines: Record<string, string>;
   /** Every selected rule, whether it found something or not. */
@@ -71,7 +73,7 @@ export const runCodeAnalyzer: Analyzer = async (project, files) => {
       })
     )
   );
-  if (files.length === 0) return { engines: {}, rules, violations: [] };
+  if (files.length === 0) return { targetedFiles: [], engines: {}, rules, violations: [] };
 
   const workspace = await core.createWorkspace(
     project.sourceDirs.filter((dir) => existsSync(dir)),
@@ -103,5 +105,5 @@ export const runCodeAnalyzer: Analyzer = async (project, files) => {
   }
   // a partial scan would pay all the debt of the engines that failed
   if (failures.length) throw new Error(`Code Analyzer could not run:\n${failures.join('\n')}`);
-  return { engines, rules, violations };
+  return { targetedFiles: await workspace.getTargetedFiles(), engines, rules, violations };
 };

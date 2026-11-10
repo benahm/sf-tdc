@@ -247,7 +247,7 @@
         "fix"
       ],
       "additionalProperties": false,
-      "description": "A change that makes debt disappear without fixing it:\n- `SUPPRESSION_ADDED`: a comment or an annotation that hides a violation (NOPMD,"
+      "description": "A change that can hide debt through a suppression or by changing how the project is scanned."
     }
   }
 }

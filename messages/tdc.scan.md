@@ -12,11 +12,11 @@ The category, severity, description and documentation link of every enabled rule
 
 # flags.source-dir.summary
 
-Folder to scan instead of the packageDirectories of sfdx-project.json. Can be repeated.
+Folder to scan for a preview. Can be repeated and implies --dry-run.
 
 # flags.dry-run.summary
 
-Show the report without writing the ledger.
+Show the report without writing the ledger or the rule catalog.
 
 # flags.report-file.summary
 

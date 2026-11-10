@@ -9,6 +9,7 @@ export const TDC_DIR = '.tdc';
 export const CONFIG_FILE = 'config.json';
 export const LEDGER_FILE = 'ledger.json';
 export const CATALOG_FILE = 'catalog.json';
+export const SFDX_PROJECT_FILE = 'sfdx-project.json';
 
 export type RuleSetting = {
   enabled?: boolean;
@@ -38,11 +39,11 @@ export type TdcConfig = {
   game: {
     /** "named" ranks each author in the dashboard; "team" sums them into one, and leaves names out of the report. */
     leaderboard: 'named' | 'team';
+    /** Whether the dashboard awards coins for debt removed with deleted files. Defaults to false. */
+    rewardDeletedFiles?: boolean;
   };
-  /** The agent that answers the prompt verifiers of declared debt. */
+  /** Settings for prompt verifiers of declared debt. */
   verifier?: {
-    /** Shell command that reads the prompt on its standard input, such as "claude -p" or "codex exec -". */
-    command: string;
     /** Times a prompt is asked: every answer must agree. */
     runs: number;
   };
@@ -71,7 +72,7 @@ export type Project = {
   sourceDirs: string[];
 };
 
-type SfdxProjectJson = {
+export type SfdxProjectJson = {
   packageDirectories?: Array<{ path?: string }>;
 };
 
@@ -102,24 +103,27 @@ export const toPosix = (file: string): string => file.split(path.sep).join('/');
  */
 const canonical = (file: string): string => realpathSync.native(path.resolve(file));
 
+export const resolveConfig = (stored: Partial<TdcConfig>): TdcConfig => ({
+  ...DEFAULT_CONFIG,
+  ...stored,
+  severityCosts: { ...DEFAULT_CONFIG.severityCosts, ...stored.severityCosts },
+  rules: { ...stored.rules },
+  game: { ...DEFAULT_CONFIG.game, ...stored.game },
+});
+
+export const resolveSourceDirs = (root: string, sfdxProject: SfdxProjectJson, sourceDirs?: string[]): string[] => {
+  const packageDirs = (sfdxProject.packageDirectories ?? []).flatMap((dir) => (dir.path ? [dir.path] : []));
+  const dirs = sourceDirs?.length ? sourceDirs : packageDirs;
+  return (dirs.length ? dirs : ['force-app']).map((dir) => path.resolve(root, dir));
+};
+
 export const loadProject = async (cwd: string, sourceDirs?: string[]): Promise<Project> => {
   const gitTopLevel = await gitRoot(cwd);
   const repoRoot = gitTopLevel ? canonical(gitTopLevel) : undefined;
-  const root = canonical(findUp(cwd, 'sfdx-project.json') ?? repoRoot ?? cwd);
-  const sfdxProject = (await readJson<SfdxProjectJson>(path.join(root, 'sfdx-project.json'))) ?? {};
+  const root = canonical(findUp(cwd, SFDX_PROJECT_FILE) ?? repoRoot ?? cwd);
+  const sfdxProject = (await readJson<SfdxProjectJson>(path.join(root, SFDX_PROJECT_FILE))) ?? {};
   const configFile = path.join(root, TDC_DIR, CONFIG_FILE);
-  const stored = (await readJson<Partial<TdcConfig>>(configFile)) ?? {};
-  const config: TdcConfig = {
-    ...DEFAULT_CONFIG,
-    ...stored,
-    severityCosts: { ...DEFAULT_CONFIG.severityCosts, ...stored.severityCosts },
-    rules: { ...stored.rules },
-    game: { ...DEFAULT_CONFIG.game, ...stored.game },
-    ...(stored.verifier?.command ? { verifier: { ...stored.verifier, runs: stored.verifier.runs ?? 3 } } : {}),
-  };
-
-  const packageDirs = (sfdxProject.packageDirectories ?? []).flatMap((dir) => (dir.path ? [dir.path] : []));
-  const dirs = sourceDirs?.length ? sourceDirs : config.sourceDirs?.length ? config.sourceDirs : packageDirs;
+  const config = resolveConfig((await readJson<Partial<TdcConfig>>(configFile)) ?? {});
 
   return {
     root,
@@ -128,7 +132,7 @@ export const loadProject = async (cwd: string, sourceDirs?: string[]): Promise<P
     configFile,
     ledgerFile: path.join(root, TDC_DIR, LEDGER_FILE),
     catalogFile: path.join(root, TDC_DIR, CATALOG_FILE),
-    sourceDirs: (dirs.length ? dirs : ['force-app']).map((dir) => path.resolve(root, dir)),
+    sourceDirs: resolveSourceDirs(root, sfdxProject, sourceDirs?.length ? sourceDirs : config.sourceDirs),
   };
 };
 

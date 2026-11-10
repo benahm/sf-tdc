@@ -1,4 +1,4 @@
-import { rename } from 'node:fs/promises';
+import { rename, unlink } from 'node:fs/promises';
 import path from 'node:path';
 
 import { expect } from 'chai';
@@ -99,6 +99,25 @@ describe('history and leaderboard', () => {
       ['Carol', 'rules-changed', 0],
     ]);
     expect(events[1].moved).to.equal(2);
+  });
+
+  it('records debt from a deleted accented filename and only rewards it when configured', async () => {
+    const file = 'force-app/main/default/classes/Résumé.cls';
+    await writeSources(root, { 'classes/Résumé.cls': "System.debug('example');" });
+    await scanAndCommit('Alice', 'feat: add another class', '2026-10-02T10:00:00Z');
+    await unlink(path.join(root, file));
+    await scanAndCommit('Bob', 'refactor: remove an unused class', '2026-10-03T10:00:00Z');
+
+    const project = await loadProject(root);
+    const event = (await readHistory(project)).at(-1)!;
+    expect(event.coins).to.equal(0);
+    expect(event.paid).to.deep.equal([]);
+    expect(event.deleted.map((finding) => finding.file)).to.deep.equal([file]);
+
+    await writeConfig(project.configFile, { game: { ...project.config.game, rewardDeletedFiles: true } });
+    const rewarded = (await readHistory(await loadProject(root))).at(-1)!;
+    expect(rewarded.deleted).to.deep.equal(event.deleted);
+    expect(rewarded.coins).to.equal(5);
   });
 
   it('gives no coins when code-analyzer is upgraded', async () => {

@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { TestContext } from '@salesforce/core/testSetup';
@@ -12,8 +12,16 @@ import TdcNext from '../../src/commands/tdc/next.js';
 import TdcReject from '../../src/commands/tdc/reject.js';
 import TdcScan from '../../src/commands/tdc/scan.js';
 import { declaredId, locate, severityOf, type DebtInput } from '../../src/debt/declared.js';
-import { parseVerdict, promptRunner } from '../../src/debt/verifier.js';
-import { commitAll, createProject, gitInit, removeProject, useFakeAnalyzer, writeSources } from '../helpers.js';
+import { parseVerdict, promptRunner, VERIFIER_COMMAND_ENV } from '../../src/debt/verifier.js';
+import {
+  commitAll,
+  createProject,
+  gitInit,
+  removeProject,
+  SFDX_PROJECT,
+  useFakeAnalyzer,
+  writeSources,
+} from '../helpers.js';
 
 const CLASS = 'force-app/main/default/classes/AccountService.cls';
 const SOURCE = `public class AccountService {
@@ -71,6 +79,7 @@ describe('agent commands', () => {
   const $$ = new TestContext();
   const initialCwd = process.cwd();
   const realRunner = promptRunner.run;
+  const verifierCommand = process.env[VERIFIER_COMMAND_ENV];
   let root: string;
 
   const addFromFile = async (input: unknown): Promise<TdcAddResult> => {
@@ -87,6 +96,7 @@ describe('agent commands', () => {
   };
 
   beforeEach(async () => {
+    delete process.env[VERIFIER_COMMAND_ENV];
     stubSfCommandUx($$.SANDBOX);
     root = await createProject({ 'classes/AccountService.cls': SOURCE });
     gitInit(root);
@@ -99,6 +109,7 @@ describe('agent commands', () => {
     process.chdir(initialCwd);
     process.exitCode = undefined;
     promptRunner.run = realRunner;
+    if (verifierCommand !== undefined) process.env[VERIFIER_COMMAND_ENV] = verifierCommand;
     $$.restore();
     await removeProject(root);
   });
@@ -164,11 +175,69 @@ describe('agent commands', () => {
     expect(ignored.results.map((item) => item.status)).to.deep.equal(['suppressed', 'suppressed']);
   });
 
-  it('check accepts a change of configuration that hides no debt', async () => {
-    await writeFile(path.join(root, '.tdc/config.json'), JSON.stringify({ dailyRate: 800 }));
+  it('check credits a fix alongside changes to pricing, the goal, and the Salesforce API version', async () => {
+    await writeFile(
+      path.join(root, '.tdc/config.json'),
+      JSON.stringify({ dailyRate: 800, goal: { date: '2027-03-31', debt: 15 } })
+    );
+    await writeFile(path.join(root, 'sfdx-project.json'), SFDX_PROJECT.replace('62.0', '63.0'));
+    await writeSources(root, { 'classes/AccountService.cls': SOURCE.replace("System.debug('done');", '') });
+    await TdcScan.run([]);
     const result = await TdcCheck.run([]);
     expect(result.passed).to.equal(true);
-    expect(result.warnings[0]).to.include('.tdc/config.json changed');
+    expect(result.cheats).to.deep.equal([]);
+    expect(result.sinceBase?.paid).to.equal(5);
+  });
+
+  it('check flags source scope changes from either project configuration', async () => {
+    await mkdir(path.join(root, 'other'));
+    await writeFile(path.join(root, '.tdc/config.json'), JSON.stringify({ sourceDirs: ['other'] }));
+    await TdcScan.run([]);
+    expect((await TdcCheck.run([])).cheats.map(({ file }) => file)).to.deep.equal(['.tdc/config.json']);
+
+    await unlink(path.join(root, '.tdc/config.json'));
+    await writeFile(path.join(root, 'sfdx-project.json'), SFDX_PROJECT.replace('force-app', 'other'));
+    const result = await TdcCheck.run([]);
+    expect(result.passed).to.equal(false);
+    expect(result.cheats.map(({ file }) => file)).to.deep.equal(['sfdx-project.json']);
+  });
+
+  it('check counts new suppression markers only in scanned files', async () => {
+    const oldMarker = '// NOPMD existing';
+    await writeSources(root, { 'classes/AccountService.cls': `${oldMarker}\n${SOURCE}` });
+    await writeFile(path.join(root, '.forceignore'), '**/Ignored.cls\n');
+    await writeFile(path.join(root, 'README.md'), 'Project docs');
+    commitAll(root, 'Alice', 'chore: document the project');
+
+    await writeFile(path.join(root, 'README.md'), 'Document // NOPMD');
+    await writeSources(root, {
+      'classes/AccountService.cls': `${SOURCE}\n${oldMarker} explanation`,
+      'classes/Ignored.cls': '// NOPMD',
+    });
+    const moved = await TdcCheck.run([]);
+    expect(moved.passed).to.equal(true);
+    expect(moved.cheats).to.deep.equal([]);
+
+    const accented = 'force-app/main/default/classes/Résumé.cls';
+    await writeSources(root, { 'classes/Résumé.cls': '// NOPMD' });
+    const added = await TdcCheck.run([]);
+    expect(added.passed).to.equal(false);
+    expect(added.cheats.map(({ code, file, line }) => [code, file, line])).to.deep.equal([
+      ['SUPPRESSION_ADDED', accented, 1],
+    ]);
+  });
+
+  it('check classifies debt in a deleted file with an accented name as deleted', async () => {
+    const file = 'force-app/main/default/classes/Résumé.cls';
+    await writeSources(root, { 'classes/Résumé.cls': "System.debug('example');" });
+    await TdcScan.run([]);
+    commitAll(root, 'Alice', 'feat: add another class');
+    await unlink(path.join(root, file));
+    await TdcScan.run([]);
+
+    const result = await TdcCheck.run([]);
+    expect(result.sinceBase).to.deep.include({ paid: 0, deleted: 5 });
+    expect(result.results[0]).to.deep.include({ file, status: 'deleted' });
   });
 
   it('add declares a debt whose verifier finds it, and check marks it fixed', async () => {
@@ -213,7 +282,7 @@ describe('agent commands', () => {
     const prompt: DebtInput = { ...HARDCODED_ID, verifier: { kind: 'prompt', prompt: 'Is a user id hardcoded?' } };
     expect(await refusal(addFromFile(prompt))).to.equal('NO_VERIFIER_COMMAND');
 
-    await writeFile(path.join(root, '.tdc/config.json'), JSON.stringify({ verifier: { command: 'agent', runs: 2 } }));
+    await writeFile(path.join(root, '.tdc/config.json'), JSON.stringify({ verifier: { runs: 2 } }));
     const answers = [
       '{"verdict":"present","evidence":"return \'005000000000001\';"}',
       '{"verdict":"present","evidence":"made up"}',
@@ -224,6 +293,29 @@ describe('agent commands', () => {
     promptRunner.run = async () => '{"verdict":"present","evidence":"return \'005000000000001\';"}';
     const added = await addFromFile(prompt);
     expect(added.debt.calibration).to.have.length(2);
+  });
+
+  it('check ignores a verifier command introduced by the changes, even when a prompt debt is touched', async () => {
+    promptRunner.run = async () => '{"verdict":"present","evidence":"return \'005000000000001\';"}';
+    const { debt } = await addFromFile({
+      ...HARDCODED_ID,
+      verifier: { kind: 'prompt', prompt: 'Is a user id hardcoded?' },
+    });
+    promptRunner.run = realRunner;
+    commitAll(root, 'Alice', 'chore: declare the hardcoded id');
+
+    await writeFile(
+      path.join(root, '.tdc/config.json'),
+      JSON.stringify({ verifier: { command: 'echo invoked > verifier-ran.txt', runs: 1 } })
+    );
+    await writeSources(root, {
+      'classes/AccountService.cls': SOURCE.replace("'005000000000001'", 'UserInfo.getUserId()'),
+    });
+    const result = await TdcCheck.run([]);
+    expect(result.passed).to.equal(true);
+    expect(result.warnings[0]).to.include(VERIFIER_COMMAND_ENV);
+    expect(result.results).to.deep.equal([]);
+    expect(await refusal(TdcCheck.run(['--id', debt.id]))).to.equal('NO_VERIFIER_COMMAND');
   });
 
   it('reject sets a declared debt aside, but not the debt of the rules', async () => {
