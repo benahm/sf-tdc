@@ -129,17 +129,32 @@ describe('dashboard', () => {
     expect(data).to.include({ debt: 0, committedDebt: 5 });
   });
 
-  it('keeps untrusted code and commit strings inside the JSON data block', async () => {
+  it('keeps untrusted strings inside both JSON data blocks and shares measured rule metadata', async () => {
     const data = await dashboardData(await loadProject(root));
     const attack = '</script><script>alert("injection")</script><img src=x onerror=alert(1)>';
     data.project = attack;
     data.findings[0].snippet = attack;
+    data.findings.push({ ...data.findings[0], id: 'second' });
     const html = renderDashboard(data);
     expect(html).not.to.include(attack);
     const embedded = /<script id="tdc-data" type="application\/json">([\s\S]*?)<\/script>/.exec(html)!;
-    const decoded = JSON.parse(embedded[1]) as typeof data;
-    expect(decoded.project).to.equal(attack);
-    expect(decoded.findings[0].snippet).to.equal(attack);
+    const details = /<script id="tdc-details" type="application\/json">([\s\S]*?)<\/script>/.exec(html)!;
+    const overview = JSON.parse(embedded[1]) as Record<string, unknown>;
+    const findingData = JSON.parse(details[1]) as Record<string, unknown>;
+    const { id, rule, file, cost, line, problem, severity, category, url } = data.findings[0];
+    expect(overview).to.include({ project: attack, count: 2, measuredCount: 2 });
+    expect(overview).not.to.have.property('findings');
+    expect(overview.rules).to.deep.equal([{ rule, problem, severity, category, url }]);
+    expect(overview.categories).to.deep.equal([[category, { count: 2, cost: cost * 2 }]]);
+    expect(findingData).to.deep.equal({
+      paths: [file],
+      snippets: [attack],
+      rows: [
+        [id, 0, 0, 0, cost, line],
+        ['second', 0, 0, 0, cost, line],
+      ],
+      declared: [],
+    });
   });
 
   it('keeps declared debt outside the measured balance and never runs its prompt verifier', async () => {

@@ -92,23 +92,42 @@ const readSource = async (project: Project, file: string): Promise<string | unde
 const locateFindings = async (project: Project, findings: LedgerFinding[]): Promise<Map<string, number>> => {
   const byFile = new Map<string, LedgerFinding[]>();
   for (const finding of findings) {
-    if (finding.snippet) byFile.set(finding.file, [...(byFile.get(finding.file) ?? []), finding]);
+    if (!finding.snippet) continue;
+    const items = byFile.get(finding.file);
+    if (items) items.push(finding);
+    else byFile.set(finding.file, [finding]);
   }
   const located = new Map<string, number>();
   await Promise.all(
     [...byFile].map(async ([file, items]) => {
       const content = await readSource(project, file);
       if (content === undefined) return;
-      const snippets = content.split(/\r?\n/).map(snippetOf);
+      const needed = new Set(items.map((item) => item.snippet));
+      const linesBySnippet = new Map<string, number[]>();
+      content.split(/\r?\n/).forEach((line, index) => {
+        const snippet = snippetOf(line);
+        if (!needed.has(snippet)) return;
+        const matches = linesBySnippet.get(snippet);
+        if (matches) matches.push(index + 1);
+        else linesBySnippet.set(snippet, [index + 1]);
+      });
       const sameHash = new Map<string, number>();
       for (const item of items) sameHash.set(item.hash, (sameHash.get(item.hash) ?? 0) + 1);
+      const ranksByHash = new Map<string, Map<string, number>>();
       for (const item of items) {
-        const matches = snippets.flatMap((snippet, index) => (snippet === item.snippet ? [index + 1] : []));
-        if (!matches.length) continue;
-        const count = sameHash.get(item.hash) ?? 1;
-        let rank = 0;
-        while (rank < count && findingId(file, item.hash, rank) !== item.id) rank++;
-        located.set(item.id, matches[Math.min(rank < count ? rank : 0, matches.length - 1)]);
+        const matches = linesBySnippet.get(item.snippet);
+        if (!matches) continue;
+        let ranks = ranksByHash.get(item.hash);
+        if (!ranks) {
+          ranks = new Map();
+          const count = sameHash.get(item.hash) ?? 1;
+          for (let rank = 0; rank < count; rank++) {
+            const id = findingId(file, item.hash, rank);
+            if (!ranks.has(id)) ranks.set(id, rank);
+          }
+          ranksByHash.set(item.hash, ranks);
+        }
+        located.set(item.id, matches[Math.min(ranks.get(item.id) ?? 0, matches.length - 1)]);
       }
     })
   );
@@ -167,7 +186,7 @@ export const dashboardData = async (
   const team = project.config.game.leaderboard === 'team';
   const players = buildLeaderboard(events);
   return {
-    version: 3,
+    version: 4,
     project: path.basename(project.root),
     generatedAt: new Date().toISOString(),
     branch,

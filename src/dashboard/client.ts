@@ -42,8 +42,8 @@ const withCoin = (node) => {
   return node;
 };
 const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const all = [...data.findings, ...data.declared];
 const measured = (f) => f.source === "code-analyzer";
+const measuredFinding = (f) => ({ ...f, ...data.rules[f.rule], source: "code-analyzer" });
 /* The category of the rule from the catalog, or its engine when the catalog is missing */
 const groupOf = (f) => f.category || f.rule.split(":")[0];
 /* A path that wraps at its slashes, the file name standing out from its folders */
@@ -97,6 +97,7 @@ function tab(name) {
   if (fromHash() !== name && (name !== "overview" || location.hash)) window.history.replaceState(null, "", "#/" + name);
   window.scrollTo(0, 0);
   if (name === "overview") draw();
+  if (name === "debts") renderRows();
 }
 document.querySelectorAll("[data-tab]").forEach((b) => (b.onclick = () => tab(b.dataset.tab)));
 window.addEventListener("hashchange", () => {
@@ -121,7 +122,7 @@ themeToggle.onclick = () => {
 text("project", data.project);
 text("branch", data.branch + (data.commit ? " · " + data.commit : ""));
 text("generated", "Statement date · " + date(data.generatedAt));
-text("debtcount", fmt(all.length));
+text("debtcount", fmt(data.count));
 text("collectorcount", fmt(data.players.length));
 
 /* Statement of account */
@@ -201,7 +202,7 @@ text(
 })();
 
 /* Credits and debits of the period, and the chart */
-function history() {
+function visibleHistory() {
   return data.history.filter((e) => !period || Date.parse(e.date) >= Date.parse(data.generatedAt) - period * 86400000);
 }
 const ns = "http://www.w3.org/2000/svg";
@@ -235,7 +236,7 @@ function niceStep(max) {
   return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag;
 }
 function draw() {
-  const events = history();
+  const events = visibleHistory();
   totals(events);
   const host = $("chart");
   host.replaceChildren();
@@ -415,14 +416,7 @@ new ResizeObserver(() => {
 draw();
 
 /* Collection notices: the files that owe the most */
-const owed = new Map();
-data.findings.forEach((f) => {
-  const o = owed.get(f.file) || { cost: 0, count: 0 };
-  o.cost += f.cost;
-  o.count++;
-  owed.set(f.file, o);
-});
-const debtors = [...owed].sort((a, b) => b[1].cost - a[1].cost || a[0].localeCompare(b[0])).slice(0, 5);
+const debtors = data.files;
 if (!debtors.length) $("files").append(el("p", "No file owes anything. Keep the books clean.", "empty"));
 debtors.forEach(([file, o], i) => {
   const b = el("button", undefined, "debtor");
@@ -445,7 +439,6 @@ debtors.forEach(([file, o], i) => {
     $("engine").value = "all";
     $("severity").value = "all";
     page = 0;
-    renderRows();
     tab("debts");
   };
   $("files").append(b);
@@ -453,15 +446,8 @@ debtors.forEach(([file, o], i) => {
 
 /* What the debt is made of: measured debt by category, each bar opening the debts of its category */
 (function categories() {
-  const groups = new Map();
-  data.findings.forEach((f) => {
-    const g = groups.get(groupOf(f)) || { cost: 0, count: 0 };
-    g.cost += f.cost;
-    g.count++;
-    groups.set(groupOf(f), g);
-  });
-  const rows = [...groups].sort((a, b) => b[1].cost - a[1].cost || a[0].localeCompare(b[0]));
-  $("cataloghint").hidden = data.catalog || !data.findings.length;
+  const rows = data.categories;
+  $("cataloghint").hidden = data.catalog || !data.measuredCount;
   if (!data.catalog) text("categorytag", "By engine");
   if (!rows.length) $("categories").append(el("p", "No measured debt.", "empty"));
   const top = rows.length ? rows[0][1].cost : 1;
@@ -480,12 +466,12 @@ debtors.forEach(([file, o], i) => {
     b.append(head, track, el("small", plural(g.count, "finding"), "muted"));
     b.setAttribute("aria-label", name + ": " + fmt(g.cost) + " TDC in " + g.count + " findings. Show these debts.");
     b.onclick = () => {
+      loadFindings();
       $("search").value = "";
       $("source").value = "code-analyzer";
       $("engine").value = name;
       $("severity").value = "all";
       page = 0;
-      renderRows();
       tab("debts");
     };
     $("categories").append(b);
@@ -506,28 +492,8 @@ function bountyCard(f) {
   b.onclick = () => showDebt(f);
   return b;
 }
-function pick(sorted, keyOf, count, skip) {
-  const seen = new Set(),
-    out = [];
-  for (const f of sorted) {
-    if (out.length === count) break;
-    if (seen.has(keyOf(f)) || (skip && skip.has(f.id))) continue;
-    seen.add(keyOf(f));
-    out.push(f);
-  }
-  return out;
-}
-const big = pick(
-  [...data.findings].sort((a, b) => b.cost - a.cost || a.file.localeCompare(b.file) || a.id.localeCompare(b.id)),
-  (f) => f.file,
-  4
-);
-const quick = pick(
-  [...data.findings].sort((a, b) => a.cost - b.cost || a.file.localeCompare(b.file) || a.id.localeCompare(b.id)),
-  (f) => f.rule,
-  4,
-  new Set(big.map((f) => f.id))
-);
+const big = data.big.map(measuredFinding);
+const quick = data.quick.map(measuredFinding);
 if (!big.length) $("next").append(el("p", "No bounty left. Every measured debt is repaid.", "empty"));
 big.forEach((f) => $("next").append(bountyCard(f)));
 if (!quick.length)
@@ -586,19 +552,33 @@ if (data.goal) {
 }
 
 /* Debts */
-const keys = [...new Set(all.map(groupOf))].sort();
-keys.forEach((k) => {
-  const o = el("option", k);
-  o.value = k;
-  $("engine").append(o);
-});
-SEVERITIES.filter((name) => all.some((f) => f.severity === name)).forEach((name) => {
-  const o = el("option", name);
-  o.value = name;
-  $("severity").append(o);
-});
+let all;
+function loadFindings() {
+  if (all) return;
+  const block = $("tdc-details");
+  const { rows, paths, snippets, declared } = JSON.parse(block.textContent);
+  block.remove();
+  all = rows.map(([id, rule, file, snippet, cost, line]) =>
+    measuredFinding({ id, rule, file: paths[file], snippet: snippets[snippet], cost, line })
+  ).concat(declared);
+  const groups = new Set(), severities = new Set();
+  for (const finding of all) {
+    groups.add(groupOf(finding));
+    severities.add(finding.severity);
+  }
+  for (const name of [...groups].sort()) {
+    const option = el("option", name);
+    option.value = name;
+    $("engine").append(option);
+  }
+  for (const name of SEVERITIES.filter((severity) => severities.has(severity))) {
+    const option = el("option", name);
+    option.value = name;
+    $("severity").append(option);
+  }
+}
 text("measuredtotal", fmt(data.debt) + " TDC");
-text("declaredtotal", fmt(data.declared.reduce((s, d) => s + d.cost, 0)) + " declared TDC · outside balance");
+text("declaredtotal", fmt(data.declaredDebt) + " declared TDC · outside balance");
 function showDebt(f) {
   text("detailtitle", f.problem);
   const body = $("detailbody");
@@ -652,25 +632,42 @@ $("close").onclick = () => $("detail").close();
 $("detail").addEventListener("click", (ev) => {
   if (ev.target === $("detail")) $("detail").close();
 });
-function renderRows() {
+const sortedFindings = new Map();
+let filterKey, matching, measuredCost, declaredCost, searchTimer;
+function filterFindings() {
   const q = $("search").value.toLowerCase(),
     source = $("source").value,
     severity = $("severity").value,
-    engine = $("engine").value;
+    engine = $("engine").value,
+    sort = $("sort").value;
+  const key = JSON.stringify([q, source, severity, engine, sort]);
+  if (key === filterKey) return;
+  filterKey = key;
   $("reset").hidden = !q && source === "all" && severity === "all" && engine === "all";
-  const matching = all
-    .filter(
-      (f) =>
-        (source === "all" || f.source === source) &&
-        (severity === "all" || f.severity === severity) &&
-        (engine === "all" || groupOf(f) === engine) &&
-        [f.file, f.rule, f.problem, f.id, f.category || ""].some((s) => s.toLowerCase().includes(q))
-    )
-    .sort((a, b) =>
-      $("sort").value === "file"
-        ? a.file.localeCompare(b.file) || b.cost - a.cost
-        : b.cost - a.cost || a.file.localeCompare(b.file)
-    );
+  if (!sortedFindings.has(sort)) {
+    const byFile = (a, b) => a.file.localeCompare(b.file);
+    const byCost = (a, b) => b.cost - a.cost;
+    sortedFindings.set(sort, [...all].sort(
+      sort === "file" ? (a, b) => byFile(a, b) || byCost(a, b) : (a, b) => byCost(a, b) || byFile(a, b)
+    ));
+  }
+  matching = [];
+  measuredCost = 0;
+  declaredCost = 0;
+  for (const f of sortedFindings.get(sort)) {
+    if (source !== "all" && f.source !== source) continue;
+    if (severity !== "all" && f.severity !== severity) continue;
+    if (engine !== "all" && groupOf(f) !== engine) continue;
+    if (q && ![f.file, f.rule, f.problem, f.id, f.category || ""].some((s) => s.toLowerCase().includes(q))) continue;
+    matching.push(f);
+    if (measured(f)) measuredCost += f.cost;
+    else declaredCost += f.cost;
+  }
+}
+function renderRows() {
+  clearTimeout(searchTimer);
+  loadFindings();
+  filterFindings();
   const pages = Math.max(1, Math.ceil(matching.length / 50));
   page = Math.min(page, pages - 1);
   $("rows").replaceChildren();
@@ -704,9 +701,9 @@ function renderRows() {
     "results",
     plural(matching.length, "finding") +
       " · " +
-      fmt(matching.filter(measured).reduce((s, f) => s + f.cost, 0)) +
+      fmt(measuredCost) +
       " measured TDC · " +
-      fmt(matching.filter((f) => !measured(f)).reduce((s, f) => s + f.cost, 0)) +
+      fmt(declaredCost) +
       " declared TDC"
   );
   text("page", page + 1 + " / " + pages);
@@ -719,8 +716,13 @@ $("reset").onclick = () => {
   page = 0;
   renderRows();
 };
-for (const id of ["search", "source", "severity", "engine", "sort"])
-  $(id).addEventListener(id === "search" ? "input" : "change", () => {
+$("search").addEventListener("input", () => {
+  page = 0;
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(renderRows, 150);
+});
+for (const id of ["source", "severity", "engine", "sort"])
+  $(id).addEventListener("change", () => {
     page = 0;
     renderRows();
   });
@@ -732,8 +734,6 @@ $("nextpage").onclick = () => {
   page++;
   renderRows();
 };
-renderRows();
-
 /* Collectors */
 (function collectors() {
   if (!data.players.length) {

@@ -1,10 +1,14 @@
 import { CLIENT } from './client.js';
 import type { DashboardData } from './data.js';
+import { dashboardPayload } from './payload.js';
 import { STYLES } from './styles.js';
 
 /** Escape the script-data boundary, including strings supplied by source code and commit messages. */
+const scriptData = (data: object): string =>
+  JSON.stringify(data).replaceAll('<', '\\u003c').replaceAll('>', '\\u003e').replaceAll('&', '\\u0026');
+
 export const renderDashboard = (data: DashboardData): string => {
-  const json = JSON.stringify(data).replaceAll('<', '\\u003c').replaceAll('>', '\\u003e').replaceAll('&', '\\u0026');
+  const { overview, details } = dashboardPayload(data);
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -334,7 +338,10 @@ export const renderDashboard = (data: DashboardData): string => {
       </div>
     </dialog>
     <script id="tdc-data" type="application/json">
-      ${json}
+      ${scriptData(overview)}
+    </script>
+    <script id="tdc-details" type="application/json">
+      ${scriptData(details)}
     </script>
     <script>
       ${CLIENT}
