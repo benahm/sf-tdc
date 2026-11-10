@@ -10,6 +10,7 @@ import { expect } from 'chai';
 import TdcCheck from '../../../src/commands/tdc/check.js';
 import TdcInit from '../../../src/commands/tdc/init.js';
 import TdcScan from '../../../src/commands/tdc/scan.js';
+import { loadProject } from '../../../src/project/project.js';
 import { commitAll, createProject, gitInit, removeProject, useFakeAnalyzer, writeSources } from '../../helpers.js';
 
 const LOOP = `public class AccountService {
@@ -51,6 +52,26 @@ describe('tdc commands', () => {
     } catch (error) {
       expect((error as Error).message).to.include('already exists');
     }
+  });
+
+  it('rejects misspelled settings and negative rule costs, and can reset the configuration', async () => {
+    const configFile = path.join(root, '.tdc/config.json');
+    await TdcInit.run([]);
+    const errorFor = async (config: object): Promise<string> => {
+      await writeFile(configFile, JSON.stringify(config));
+      try {
+        await loadProject(root);
+      } catch (error) {
+        return (error as Error).message;
+      }
+      return expect.fail('expected invalid configuration to be rejected');
+    };
+    expect(await errorFor({ dailyRtae: 600 })).to.include('.tdc/config.json.dailyRtae');
+    expect(await errorFor({ rules: { 'pmd:OperationWithLimitsInLoop': { cost: -1 } } })).to.include(
+      '.tdc/config.json.rules.pmd:OperationWithLimitsInLoop.cost'
+    );
+    await TdcInit.run(['--force']);
+    expect((await loadProject(root)).config.dailyRate).to.equal(600);
   });
 
   it('scan prices the debt, writes the ledger, and reports what was paid since', async () => {
@@ -137,5 +158,25 @@ describe('tdc commands', () => {
     await writeFile(path.join(root, 'README.md'), 'not scanned');
     expect((await TdcScan.run([])).ledgerWritten).to.equal(false);
     expect(await readFile(ledger, 'utf8')).to.equal(before);
+  });
+
+  it('warns before falling back to the base tip when a shallow clone lacks the common ancestor', async () => {
+    await TdcScan.run([]);
+    commitAll(root, 'Alice', 'chore: first ledger');
+    execFileSync('git', ['checkout', '-qb', 'feature'], { cwd: root });
+    await writeFile(path.join(root, 'feature.txt'), 'feature');
+    commitAll(root, 'Alice', 'chore: advance feature');
+    execFileSync('git', ['checkout', '-q', 'main'], { cwd: root });
+    await writeFile(path.join(root, 'main.txt'), 'main');
+    commitAll(root, 'Alice', 'chore: advance main');
+    execFileSync('git', ['checkout', '-q', 'feature'], { cwd: root });
+    // Mark both tips as shallow roots, as in a depth-one clone of both branches.
+    const tips = execFileSync('git', ['rev-parse', 'main', 'feature'], { cwd: root, encoding: 'utf8' });
+    await writeFile(path.join(root, '.git/shallow'), tips);
+
+    const result = await TdcCheck.run(['--base', 'main']);
+    expect(result.passed).to.equal(true);
+    expect(result.sinceBase).to.deep.include({ paid: 0, created: 0 });
+    expect(result.warnings[0]).to.include('fetch-depth: 0');
   });
 });

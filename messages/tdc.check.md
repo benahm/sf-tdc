@@ -10,6 +10,7 @@ Scans the project and compares it with the ledger of --base (HEAD by default, or
 - the debt grew since --base: paying more than you create passes, and debt found again in another file (a rename, a refactoring) neither grows nor shrinks it;
 - a suppression (NOPMD, @SuppressWarnings, eslint-disable) was added, or debt disappeared while .forceignore, code-analyzer.yml, sfdx-project.json or .tdc/config.json changed;
 - a debt given with --id is not paid;
+- a verified repayment of declared debt is missing from .tdc/debts, or a verifier disagrees with a changed declaration marked fixed;
 - with --max-debt, the debt is above the limit.
 
 When the rules, their costs or the engines changed since --base, the debt is re-baselined and its growth is not checked.
@@ -21,9 +22,9 @@ Each debt given with --id, or without --id each debt that the changes paid or to
 - moved: found again in another file, neither paid nor created;
 - deleted: gone with its file, which is not a payment;
 - suppressed: gone, but a suppression or a change of configuration hid it;
-- unclear: the prompt verifier of a declared debt did not give the same answer every time.
+- unclear: the verifier could not read its files or reach a verdict.
 
-A declared debt is checked by its own verifier, and marked fixed in .tdc/debts when it is paid. The nextSteps of --json tell an agent what to do next.
+The check is read-only by default. Use --update-debts to record verified repayments in .tdc/debts, then commit those files with the fix. The nextSteps of --json tell an agent what to do next.
 
 # flags.base.summary
 
@@ -36,6 +37,10 @@ Id of a debt that must be paid, or a unique prefix of it. Can be repeated.
 # flags.max-debt.summary
 
 Highest debt allowed, in TDC.
+
+# flags.update-debts.summary
+
+Mark verified repayments of declared debt as fixed in .tdc/debts.
 
 # info.created
 

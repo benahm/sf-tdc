@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import type { Severity } from '../scan/code-analyzer.js';
 import { gitRoot } from './git.js';
+import { validateConfig } from './validate-config.js';
 
 export const TDC_DIR = '.tdc';
 export const CONFIG_FILE = 'config.json';
@@ -109,6 +110,7 @@ export const resolveConfig = (stored: Partial<TdcConfig>): TdcConfig => ({
   severityCosts: { ...DEFAULT_CONFIG.severityCosts, ...stored.severityCosts },
   rules: { ...stored.rules },
   game: { ...DEFAULT_CONFIG.game, ...stored.game },
+  ...(stored.verifier ? { verifier: { runs: stored.verifier.runs ?? 3 } } : {}),
 });
 
 export const resolveSourceDirs = (root: string, sfdxProject: SfdxProjectJson, sourceDirs?: string[]): string[] => {
@@ -117,19 +119,24 @@ export const resolveSourceDirs = (root: string, sfdxProject: SfdxProjectJson, so
   return (dirs.length ? dirs : ['force-app']).map((dir) => path.resolve(root, dir));
 };
 
-export const loadProject = async (cwd: string, sourceDirs?: string[]): Promise<Project> => {
+export const locateProject = async (cwd: string): Promise<Pick<Project, 'root' | 'gitRoot' | 'configFile'>> => {
   const gitTopLevel = await gitRoot(cwd);
   const repoRoot = gitTopLevel ? canonical(gitTopLevel) : undefined;
   const root = canonical(findUp(cwd, SFDX_PROJECT_FILE) ?? repoRoot ?? cwd);
+  return { root, gitRoot: repoRoot, configFile: path.join(root, TDC_DIR, CONFIG_FILE) };
+};
+
+export const loadProject = async (cwd: string, sourceDirs?: string[]): Promise<Project> => {
+  const location = await locateProject(cwd);
+  const { root, configFile } = location;
   const sfdxProject = (await readJson<SfdxProjectJson>(path.join(root, SFDX_PROJECT_FILE))) ?? {};
-  const configFile = path.join(root, TDC_DIR, CONFIG_FILE);
-  const config = resolveConfig((await readJson<Partial<TdcConfig>>(configFile)) ?? {});
+  const stored = await readJson<Partial<TdcConfig>>(configFile);
+  if (stored !== undefined) validateConfig(stored, `${TDC_DIR}/${CONFIG_FILE}`);
+  const config = resolveConfig(stored ?? {});
 
   return {
-    root,
-    gitRoot: repoRoot,
+    ...location,
     config,
-    configFile,
     ledgerFile: path.join(root, TDC_DIR, LEDGER_FILE),
     catalogFile: path.join(root, TDC_DIR, CATALOG_FILE),
     sourceDirs: resolveSourceDirs(root, sfdxProject, sourceDirs?.length ? sourceDirs : config.sourceDirs),
@@ -137,6 +144,7 @@ export const loadProject = async (cwd: string, sourceDirs?: string[]): Promise<P
 };
 
 export const writeConfig = async (configFile: string, config: Partial<TdcConfig>): Promise<void> => {
+  validateConfig(config, `${TDC_DIR}/${CONFIG_FILE}`);
   await mkdir(path.dirname(configFile), { recursive: true });
   await writeFile(configFile, `${JSON.stringify(config, null, 2)}\n`);
 };

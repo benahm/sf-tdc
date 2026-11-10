@@ -52,8 +52,11 @@ Some commits never score:
 - **Rules changed**: a commit whose ledger has other rules, costs or engine versions than its parent. Enabling a rule
   would otherwise charge its author for all the debt the rule finds, and upgrading sf-tdc would pay or charge the
   changes of the engines.
-- **Merge commits** are skipped: the commits of the merged branch already count. With a squash merge, the squashed
-  commit counts, for the author of the pull request.
+- **Merge commits** whose ledger differs from their parents record the merged balance. Branch commits earn their own scores. With a
+  squash merge, the squashed commit counts for the author of the pull request.
+
+The dashboard warns about invalid historical ledgers and skips them. A valid ledger after an invalid parent starts a new
+baseline.
 
 ## Keep it up to date
 

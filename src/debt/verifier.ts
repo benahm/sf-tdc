@@ -93,7 +93,7 @@ export const parseVerdict = (output: string): Verdict => {
   return { verdict: 'unclear', evidence: 'no verdict in the output of the agent' };
 };
 
-const runPattern = async (project: Project, file: string, pattern: string): Promise<Verdict> => {
+const runPattern = (content: string, pattern: string): Verdict => {
   let regex: RegExp;
   try {
     regex = new RegExp(pattern, 'm');
@@ -104,11 +104,16 @@ const runPattern = async (project: Project, file: string, pattern: string): Prom
       'Give verifier.pattern as a JavaScript regular expression'
     );
   }
-  const content = await readSource(project, file);
-  if (content === undefined) return { verdict: 'fixed', evidence: `${file} does not exist` };
   const match = regex.exec(content);
   return match ? { verdict: 'present', evidence: match[0] } : { verdict: 'fixed' };
 };
+
+export const verificationFiles = (debt: Pick<DeclaredDebt, 'anchors' | 'verifier'>): string[] => [
+  ...new Set([
+    ...debt.anchors.map((anchor) => anchor.file),
+    ...(debt.verifier.kind === 'pattern' ? [debt.verifier.file] : []),
+  ]),
+];
 
 /**
  * Asks the verifier of a debt whether it is still there. A pattern answers once, deterministically. A prompt is asked
@@ -118,14 +123,14 @@ export const verify = async (
   project: Project,
   debt: Pick<DeclaredDebt, 'title' | 'description' | 'anchors' | 'verifier'>
 ): Promise<Verdict[]> => {
-  if (debt.verifier.kind === 'pattern') return [await runPattern(project, debt.verifier.file, debt.verifier.pattern)];
-
   const files = new Map<string, string>();
-  for (const file of new Set(debt.anchors.map((anchor) => anchor.file))) {
+  for (const file of verificationFiles(debt)) {
     // eslint-disable-next-line no-await-in-loop
     const content = await readSource(project, file);
-    if (content !== undefined) files.set(file, content);
+    if (content === undefined) return [{ verdict: 'unclear', evidence: `Cannot read ${file}` }];
+    files.set(file, content);
   }
+  if (debt.verifier.kind === 'pattern') return [runPattern(files.get(debt.verifier.file)!, debt.verifier.pattern)];
   const corpus = normalize([...files.values()].join('\n'));
   const prompt = buildPrompt(debt, files);
   const verdicts: Verdict[] = [];

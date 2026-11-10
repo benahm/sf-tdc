@@ -50,7 +50,21 @@ export const serializeLedger = (ledger: Ledger): string => {
 /** A version 1 ledger, from the rules of sf-tdc, parses without engines: its rules differ from any version 2 ledger. */
 export const parseLedger = (content: string): Ledger => {
   const ledger = JSON.parse(content) as Partial<Ledger>;
-  return { version: 2, engines: ledger.engines ?? {}, rules: ledger.rules ?? {}, findings: ledger.findings ?? [] };
+  if (!ledger || typeof ledger !== 'object' || Array.isArray(ledger) || !Array.isArray(ledger.findings)) {
+    throw new Error('Invalid ledger: expected an object with a findings array.');
+  }
+  for (const finding of ledger.findings) {
+    if (
+      !finding ||
+      !Number.isFinite(finding.cost) ||
+      ![finding.id, finding.rule, finding.file, finding.hash, finding.snippet].every(
+        (value) => typeof value === 'string'
+      )
+    ) {
+      throw new Error('Invalid ledger: malformed finding.');
+    }
+  }
+  return { version: 2, engines: ledger.engines ?? {}, rules: ledger.rules ?? {}, findings: ledger.findings };
 };
 
 export const readLedger = async (file: string): Promise<Ledger | undefined> => {

@@ -26,7 +26,8 @@
             "flags-dir",
             "id",
             "json",
-            "max-debt"
+            "max-debt",
+            "update-debts"
         ],
         "plugin": "sf-tdc"
     },

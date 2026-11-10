@@ -1,8 +1,10 @@
-import { rename, unlink } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { expect } from 'chai';
 
+import { dashboardData } from '../../src/dashboard/data.js';
 import { buildLeaderboard, rankOf } from '../../src/game/leaderboard.js';
 import { forecast } from '../../src/game/score.js';
 import { readHistory } from '../../src/ledger/history.js';
@@ -134,6 +136,50 @@ describe('history and leaderboard', () => {
       ['Alice', 'baseline', 0],
       ['Bob', 'rules-changed', 0],
     ]);
+  });
+
+  it('warns once about an invalid ledger and restarts scoring from the next valid baseline', async () => {
+    const project = await loadProject(root);
+    await writeFile(project.ledgerFile, '<<<<<<< HEAD\n=======\n>>>>>>> feature\n');
+    commitAll(root, 'Bob', 'chore: broken ledger', '2026-10-02T10:00:00Z');
+    const invalid = execFileSync('git', ['rev-parse', '--short=12', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+    await writeSources(root, { 'classes/AccountService.cls': FIXED });
+    await scanAndCommit('Carol', 'fix: restore the ledger', '2026-10-03T10:00:00Z');
+
+    const warnings: string[] = [];
+    const data = await dashboardData(project, (warning) => warnings.push(warning));
+    expect(warnings).to.have.length(1);
+    expect(warnings[0]).to.include(invalid);
+    expect(data.committedDebt).to.equal(0);
+    expect(data.history.map(({ kind, debt, coins }) => [kind, debt, coins])).to.deep.equal([
+      ['baseline', 30, 0],
+      ['baseline', 0, 0],
+    ]);
+  });
+
+  it('records a rescanned merge balance and scores each branch commit once', async () => {
+    execFileSync('git', ['checkout', '-qb', 'feature'], { cwd: root });
+    await writeSources(root, { 'classes/AccountService.cls': LOOP.replace(/^.*Account a =.*\n/m, '') });
+    await scanAndCommit('Bob', 'fix: remove the query', '2026-10-02T10:00:00Z');
+    execFileSync('git', ['checkout', '-q', 'main'], { cwd: root });
+    await writeSources(root, { 'classes/AccountService.cls': LOOP.replace(/^.*update new Account.*\n/m, '') });
+    await scanAndCommit('Carol', 'fix: remove the update', '2026-10-03T10:00:00Z');
+    try {
+      execFileSync(
+        'git',
+        ['-c', 'user.name=Alice', '-c', 'user.email=alice@example.com', 'merge', '--no-commit', 'feature'],
+        { cwd: root }
+      );
+    } catch {
+      execFileSync('git', ['rev-parse', '--verify', 'MERGE_HEAD'], { cwd: root });
+    }
+    await writeSources(root, { 'classes/AccountService.cls': FIXED });
+    await scanAndCommit('Alice', 'merge: rescan the resolved sources', '2026-10-04T10:00:00Z');
+
+    const data = await dashboardData(await loadProject(root));
+    expect(data.committedDebt).to.equal(0);
+    expect(data.history.at(-1)).to.deep.include({ kind: 'merge', debt: 0, coins: 0 });
+    expect(data.history.filter((event) => event.kind === 'scored').map((event) => event.coins)).to.deep.equal([15, 15]);
   });
 
   it('forecasts the payoff date from the pace of the history', async () => {

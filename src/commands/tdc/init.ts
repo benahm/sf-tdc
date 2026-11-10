@@ -4,7 +4,7 @@ import path from 'node:path';
 import { Messages } from '@salesforce/core';
 import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 
-import { DEFAULT_CONFIG, loadProject, toPosix, writeConfig, type TdcConfig } from '../../project/project.js';
+import { DEFAULT_CONFIG, locateProject, toPosix, writeConfig, type TdcConfig } from '../../project/project.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-tdc', 'tdc.init');
@@ -42,7 +42,7 @@ export default class TdcInit extends SfCommand<TdcInitResult> {
 
   public async run(): Promise<TdcInitResult> {
     const { flags } = await this.parse(TdcInit);
-    const project = await loadProject(process.cwd());
+    const project = await locateProject(process.cwd());
     const configFile = toPosix(path.relative(project.root, project.configFile));
     if (existsSync(project.configFile) && !flags.force) throw messages.createError('error.exists', [configFile]);
     if ((flags['goal-debt'] === undefined) !== (flags['goal-date'] === undefined)) {

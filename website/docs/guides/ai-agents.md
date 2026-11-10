@@ -98,8 +98,9 @@ A `present` verdict with evidence absent from the files is `unclear`.
 With `TDC_VERIFIER_COMMAND` unset, `sf tdc check` warns and skips prompt-verified debts it finds among the touched files.
 An explicit `sf tdc check --id` for such a debt requires the command.
 
-Once declared, the debt is in the queue of `sf tdc next`, and `sf tdc check` marks it `fixed` when its verifier
-finds it gone.
+Once declared, the debt appears in `sf tdc next`. Run `sf tdc check --id <id> --update-debts` to record a verified
+repayment, then commit the declaration with the fix. The default check reports verified repayments that still need to be
+recorded. A renamed or deleted source file leaves the declaration open for review.
 
 ### False positives
 

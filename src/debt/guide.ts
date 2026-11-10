@@ -41,7 +41,7 @@ export const buildGuide = (project: Project): Guide => ({
       'sf tdc next --json: the debt to fix, most expensive first',
       'Fix one item, in its file and around its line',
       'sf tdc scan: update the ledger',
-      'sf tdc check --id <id> --json: exit code 0 when it is paid, the debt did not grow and nothing was hidden; otherwise follow nextSteps',
+      'sf tdc check --id <id> --update-debts --json records verified repayments of declared debt. Follow nextSteps if the check fails.',
       'Commit the fix with .tdc/ledger.json and .tdc/debts',
     ],
     declare: [

@@ -24,7 +24,7 @@ export type Cheat = {
   fix: string;
 };
 
-type ChangedFiles = { changed: string[]; deleted: Set<string>; renamedFrom: Map<string, string> };
+export type ChangedFiles = { changed: string[]; deleted: Set<string>; renamedFrom: Map<string, string> };
 
 const SUPPRESSION = /\bNOPMD\b|@SuppressWarnings\b|\beslint-disable\b|\bcode-analyzer-suppress\b/gi;
 const TDC_CONFIG = `${TDC_DIR}/${CONFIG_FILE}`;

@@ -2,7 +2,15 @@ import path from 'node:path';
 
 import { git, showFile } from '../project/git.js';
 import { toPosix, type Project } from '../project/project.js';
-import { compareLedgers, EMPTY_LEDGER, parseLedger, sameRules, totalCost, type LedgerChanges } from './ledger.js';
+import {
+  compareLedgers,
+  EMPTY_LEDGER,
+  parseLedger,
+  sameRules,
+  totalCost,
+  type Ledger,
+  type LedgerChanges,
+} from './ledger.js';
 
 export type CommitInfo = {
   sha: string;
@@ -14,11 +22,12 @@ export type CommitInfo = {
 };
 
 /**
- * - `baseline`: the first ledger of the history: its debt was not created by the commit.
+ * - `baseline`: the first ledger or the first valid ledger after a gap in the history.
  * - `rules-changed`: rules or costs changed: the debt is re-baselined, nobody wins or loses coins.
+ * - `merge`: the merged ledger is shown as a balance, with the branch commits scored separately.
  * - `scored`: the commit paid or created debt.
  */
-export type CommitKind = 'baseline' | 'rules-changed' | 'scored';
+export type CommitKind = 'baseline' | 'rules-changed' | 'merge' | 'scored';
 
 export type CommitEvent = CommitInfo &
   LedgerChanges & {
@@ -30,21 +39,25 @@ export type CommitEvent = CommitInfo &
 
 const FIELD = '\x1f';
 
-const parseLog = (output: string): Array<CommitInfo & { parent?: string }> =>
+type HistoryCommit = CommitInfo & { parents: string[] };
+
+const parseLog = (output: string): HistoryCommit[] =>
   output
     .split('\n')
     .filter((line) => line.trim())
     .map((line) => {
       const [sha, parents, author, email, date, subject] = line.split(FIELD);
-      return { sha, parent: parents.split(' ')[0] || undefined, author, email, date, subject };
+      return { sha, parents: parents ? parents.split(' ') : [], author, email, date, subject };
     })
     .reverse();
 
 /**
- * The debt changes of every commit that changed the ledger, oldest first. Merge commits are skipped: the commits of
- * the merged branch are already counted, and with a squash merge the squashed commit is what is counted.
+ * The ledger changes in ancestry order. Merges record the resulting balance without scoring either parent's changes.
  */
-export const readHistory = async (project: Project, options: { since?: string } = {}): Promise<CommitEvent[]> => {
+export const readHistory = async (
+  project: Project,
+  options: { since?: string; onWarning?: (warning: string) => void } = {}
+): Promise<CommitEvent[]> => {
   const repoRoot = project.gitRoot;
   if (!repoRoot) throw new Error('The project is not in a git repository: the history of the debt comes from git.');
   const ledgerPath = toPosix(path.relative(repoRoot, project.ledgerFile));
@@ -55,8 +68,8 @@ export const readHistory = async (project: Project, options: { since?: string } 
   try {
     log = await git(repoRoot, [
       'log',
-      '--no-merges',
       '--full-history',
+      '--topo-order',
       `--format=%H${FIELD}%P${FIELD}%aN${FIELD}%aE${FIELD}%aI${FIELD}%s`,
       ...(options.since ? [`--since=${options.since}`] : []),
       '--',
@@ -67,35 +80,58 @@ export const readHistory = async (project: Project, options: { since?: string } 
     return [];
   }
 
-  const readCommit = async ({ parent, ...commit }: CommitInfo & { parent?: string }): Promise<CommitEvent[]> => {
-    const [afterContent, beforeContent, deleted] = await Promise.all([
-      showFile(repoRoot, commit.sha, ledgerPath),
-      parent ? showFile(repoRoot, parent, ledgerPath) : undefined,
-      git(repoRoot, [
-        'diff-tree',
-        '--root',
-        '--no-commit-id',
-        '-r',
-        '--find-renames',
-        '--name-only',
-        '-z',
-        '--diff-filter=D',
-        commit.sha,
-      ]),
+  const invalid = new Set<string>();
+  const readAt = async (sha: string): Promise<Ledger | undefined> => {
+    if (invalid.has(sha)) return undefined;
+    const content = await showFile(repoRoot, sha, ledgerPath);
+    if (content === undefined) return undefined;
+    try {
+      return parseLedger(content);
+    } catch {
+      if (!invalid.has(sha))
+        options.onWarning?.(`Skipping invalid ledger in commit ${sha.slice(0, 12)} (${ledgerPath}).`);
+      invalid.add(sha);
+      return undefined;
+    }
+  };
+
+  const readCommit = async ({ parents, ...commit }: HistoryCommit): Promise<CommitEvent[]> => {
+    const [parent] = parents;
+    const merge = parents.length > 1;
+    const [after, before, deleted] = await Promise.all([
+      readAt(commit.sha),
+      parent && !merge ? readAt(parent) : undefined,
+      merge
+        ? ''
+        : git(repoRoot, [
+            'diff-tree',
+            '--root',
+            '--no-commit-id',
+            '-r',
+            '--find-renames',
+            '--name-only',
+            '-z',
+            '--diff-filter=D',
+            commit.sha,
+          ]),
     ]);
-    // the commit deleted the ledger
-    if (afterContent === undefined) return [];
-    const after = parseLedger(afterContent);
-    const before = beforeContent === undefined ? EMPTY_LEDGER : parseLedger(beforeContent);
-    const kind: CommitKind =
-      beforeContent === undefined ? 'baseline' : sameRules(before, after) ? 'scored' : 'rules-changed';
+    if (!after) return [];
+    const kind: CommitKind = merge
+      ? 'merge'
+      : !before
+        ? 'baseline'
+        : sameRules(before, after)
+          ? 'scored'
+          : 'rules-changed';
     const deletedFiles = new Set(
       deleted
         .split('\0')
         .filter((file) => file && (!prefix || file.startsWith(`${prefix}/`)))
         .map(toProjectPath)
     );
-    const changes = compareLedgers(before, after, deletedFiles);
+    const changes = merge
+      ? { paid: [], deleted: [], created: [], moved: 0 }
+      : compareLedgers(before ?? EMPTY_LEDGER, after, deletedFiles);
     const reward = project.config.game.rewardDeletedFiles === true ? totalCost(changes.deleted) : 0;
     return [
       {

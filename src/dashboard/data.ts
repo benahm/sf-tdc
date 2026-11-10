@@ -6,9 +6,9 @@ import { buildLeaderboard, RANKS, teamOf, type Player } from '../game/leaderboar
 import { forecast, price, type Forecast, type Price } from '../game/score.js';
 import { readCatalog } from '../ledger/catalog.js';
 import { readHistory, type CommitKind } from '../ledger/history.js';
-import { readLedger, totalCost, type LedgerFinding } from '../ledger/ledger.js';
-import { git } from '../project/git.js';
-import type { Goal, Project } from '../project/project.js';
+import { parseLedger, readLedger, totalCost, type LedgerFinding } from '../ledger/ledger.js';
+import { git, showFile } from '../project/git.js';
+import { toPosix, type Goal, type Project } from '../project/project.js';
 import { findingId, snippetOf } from '../scan/engine.js';
 
 export type DashboardFinding = {
@@ -115,12 +115,28 @@ const locateFindings = async (project: Project, findings: LedgerFinding[]): Prom
   return located;
 };
 
+const readCommittedDebt = async (project: Project): Promise<number | undefined> => {
+  if (!project.gitRoot) return undefined;
+  const content = await showFile(project.gitRoot, 'HEAD', toPosix(path.relative(project.gitRoot, project.ledgerFile)));
+  if (content === undefined) return undefined;
+  try {
+    return totalCost(parseLedger(content).findings);
+  } catch {
+    // The history reader reports the invalid commit.
+    return undefined;
+  }
+};
+
 /** A portable snapshot: opening the report never scans code or runs a verifier. */
-export const dashboardData = async (project: Project): Promise<DashboardData> => {
+export const dashboardData = async (
+  project: Project,
+  onWarning?: (warning: string) => void
+): Promise<DashboardData> => {
   const ledger = await readLedger(project.ledgerFile);
   if (!ledger) throw new Error('No ledger found. Run sf tdc scan first.');
-  const [events, declared, catalog, lines] = await Promise.all([
-    project.gitRoot ? readHistory(project) : [],
+  const [events, committedDebt, declared, catalog, lines] = await Promise.all([
+    project.gitRoot ? readHistory(project, { onWarning }) : [],
+    readCommittedDebt(project),
     readDeclaredDebts(project),
     readCatalog(project.catalogFile),
     locateFindings(project, ledger.findings),
@@ -157,7 +173,7 @@ export const dashboardData = async (project: Project): Promise<DashboardData> =>
     branch,
     commit,
     debt,
-    committedDebt: events.at(-1)?.debt,
+    committedDebt,
     price: price(debt, project.config),
     goal: project.config.goal,
     forecast: comparable.length >= 2 ? forecast(comparable, project.config.goal) : undefined,

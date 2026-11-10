@@ -6,7 +6,7 @@ Declare debt that the rules don't find, with the way to verify that it is fixed.
 
 Reads a debt as JSON, from the standard input or --file: what the problem is, where it is (anchors: a file and a snippet copied from it), facts about its criticality, and a verifier. "sf tdc guide" shows the format.
 
-The debt is refused when a field is wrong, when a snippet is not in its file, or when the same debt is already declared. Then its verifier runs on the current code, and must find the debt: a verifier that answers "fixed" to anything would prove nothing. A pattern verifier runs once; a prompt verifier runs the agent command of .tdc/config.json several times, and every answer must be "present".
+The debt is refused when a field is wrong, when a snippet is not in its file, or when the same debt is already declared. Then its verifier runs on the current code and must find the debt. A pattern verifier runs once. A prompt verifier runs the command in TDC_VERIFIER_COMMAND several times and requires a "present" answer every time.
 
 The severity is computed from the criticality, and the cost from the severity, as for the rules. The debt is written to .tdc/debts/<id>.json: commit it.
 

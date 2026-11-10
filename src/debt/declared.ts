@@ -29,7 +29,7 @@ export type Anchor = { file: string; snippet: string };
 
 /**
  * - `pattern`: a regular expression that matches the file while the debt is there. Deterministic.
- * - `prompt`: a question answered by the agent command of .tdc/config.json, several times. Probabilistic.
+ * - `prompt`: a question answered several times by the command in TDC_VERIFIER_COMMAND. Probabilistic.
  */
 export type Verifier = { kind: 'pattern'; file: string; pattern: string } | { kind: 'prompt'; prompt: string };
 

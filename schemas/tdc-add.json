@@ -206,7 +206,7 @@
           "additionalProperties": false
         }
       ],
-      "description": "- `pattern`: a regular expression that matches the file while the debt is there. Deterministic.\n- `prompt`: a question answered by the agent command of .tdc/config.json, several times. Probabilistic."
+      "description": "- `pattern`: a regular expression that matches the file while the debt is there. Deterministic.\n- `prompt`: a question answered several times by the command in TDC_VERIFIER_COMMAND. Probabilistic."
     },
     "DeclaredStatus": {
       "type": "string",

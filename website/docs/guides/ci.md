@@ -6,10 +6,16 @@ title: CI setup
 
 - `.tdc/ledger.json` is missing or out of date: a payment without its ledger would give its TDC to someone else;
 - with `--base <ref>`, the debt grew since the ledger of that ref: paying more than you create passes;
+- a verified repayment of declared debt still has status `confirmed` in `.tdc/debts`;
 - with `--max-debt <TDC>`, the debt is above the limit.
 
 It needs the history of the base branch (`fetch-depth: 0`), Java and Python for [the rules](../rules.md), and no
 org.
+
+Use `fetch-depth: 0` so Git can find the common ancestor. If it cannot, the check warns and uses the tip of `--base`.
+That comparison can report growth caused by unrelated changes on the target branch.
+
+Run `sf tdc check --update-debts` locally to record verified repayments. Commit the changed declaration files with the fix.
 
 ## GitHub Actions
 

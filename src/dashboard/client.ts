@@ -629,7 +629,7 @@ function showCommit(e) {
     el("p", "Balance after commit: " + fmt(e.debt) + " TDC")
   );
   if (e.kind !== "scored")
-    body.append(el("p", "Portfolio revaluation. No repayments, new debt or coins are scored.", "notice"));
+    body.append(el("p", balanceEventLabel(e.kind), "notice"));
   else body.append(withCoin(el("p", "Coins: " + signed(e.coins), e.coins < 0 ? "created" : "gold")));
   for (const [label, list] of [
     ["Repaid", e.paidFindings],
@@ -645,6 +645,11 @@ function showCommit(e) {
     el("p", fmt(e.deleted) + " TDC written off with deleted files · " + e.moved + " findings moved.", "muted")
   );
   $("detail").showModal();
+}
+function balanceEventLabel(kind) {
+  if (kind === "baseline") return "Ledger baseline · no coins";
+  if (kind === "merge") return "Merged ledger · no coins";
+  return "Portfolio revaluation · rules or engines changed · no coins";
 }
 function renderEvents() {
   $("events").replaceChildren();
@@ -666,16 +671,7 @@ function renderEvents() {
       b.type = "button";
       b.onclick = () => showCommit(e);
       info.append(b, el("br"), el("small", (e.author ? e.author + " · " : "") + e.sha.slice(0, 7)));
-      if (!scored)
-        info.append(
-          el(
-            "p",
-            e.kind === "baseline"
-              ? "Account opened · initial baseline · no coins"
-              : "Portfolio revaluation · rules or engines changed · no coins",
-            "gold"
-          )
-        );
+      if (!scored) info.append(el("p", balanceEventLabel(e.kind), "gold"));
       if (e.deleted) info.append(el("p", fmt(e.deleted) + " TDC written off with deleted files", "muted"));
       row.append(
         el("td", date(e.date), "number"),

@@ -129,12 +129,12 @@ export const renderDashboard = (data: DashboardData): string => {
             </div>
             <div id="chart"></div>
             <div class="legend">
-              <span>Measured debt</span><span class="reference">Portfolio revaluation</span
+              <span>Measured debt</span><span class="reference">Balance baseline</span
               ><span class="target">Goal</span>
             </div>
             <p class="muted" style="font-size: 12px; margin-top: 10px">
-              Debt written off with deleted files lowers the balance but is not a repayment. Gaps mark changes of
-              rules, costs or engines.
+              Debt written off with deleted files lowers the balance. Gaps mark a new baseline after a merge,
+              a break in the ledger history or a change of rules, costs or engines.
             </p>
           </div>
           <div class="split">

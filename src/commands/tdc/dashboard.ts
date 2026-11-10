@@ -25,7 +25,7 @@ export default class TdcDashboard extends SfCommand<TdcDashboardResult> {
 
   public async run(): Promise<TdcDashboardResult> {
     const { flags } = await this.parse(TdcDashboard);
-    const data = await dashboardData(await loadProject(process.cwd()));
+    const data = await dashboardData(await loadProject(process.cwd()), (warning) => this.warn(warning));
     const file = flags.output
       ? path.resolve(flags.output)
       : path.join(await mkdtemp(path.join(os.tmpdir(), 'sf-tdc-dashboard-')), 'index.html');

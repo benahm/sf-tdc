@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -240,7 +241,7 @@ describe('agent commands', () => {
     expect(result.results[0]).to.deep.include({ file, status: 'deleted' });
   });
 
-  it('add declares a debt whose verifier finds it, and check marks it fixed', async () => {
+  it('check reports an unrecorded repayment until explicitly asked to record it', async () => {
     const added = await addFromFile(HARDCODED_ID);
     expect(added.debt).to.deep.include({ status: 'confirmed', severity: 'Critical', cost: 60, source: 'agent' });
     expect(added.file).to.equal(`.tdc/debts/${added.debt.id}.json`);
@@ -256,7 +257,10 @@ describe('agent commands', () => {
       'classes/AccountService.cls': SOURCE.replace("'005000000000001'", 'UserInfo.getUserId()'),
     });
     await TdcScan.run([]);
-    const fixed = await TdcCheck.run([]);
+    commitAll(root, 'Alice', 'fix: use the current user');
+    const debtPath = path.join(root, added.file);
+    const declaration = await readFile(debtPath, 'utf8');
+    const fixed = await TdcCheck.run(['--base', 'HEAD^']);
     expect(fixed.results).to.deep.include({
       id: added.debt.id,
       source: 'agent',
@@ -264,8 +268,41 @@ describe('agent commands', () => {
       status: 'paid',
       verdicts: [{ verdict: 'fixed' }],
     });
-    const stored = JSON.parse(await readFile(path.join(root, added.file), 'utf8')) as { status: string };
+    expect(fixed.passed).to.equal(false);
+    expect(fixed.failures[0]).to.include(`${added.file} is still confirmed`);
+    expect(fixed.nextSteps[0]).to.include('--update-debts');
+    expect(await readFile(debtPath, 'utf8')).to.equal(declaration);
+
+    expect((await TdcCheck.run(['--id', added.debt.id, '--update-debts'])).passed).to.equal(true);
+    const stored = JSON.parse(await readFile(debtPath, 'utf8')) as { status: string };
     expect(stored.status).to.equal('fixed');
+    commitAll(root, 'Alice', 'chore: record the repayment');
+    expect((await TdcCheck.run(['--base', 'HEAD~2'])).passed).to.equal(true);
+
+    await writeSources(root, { 'classes/AccountService.cls': SOURCE });
+    const invalid = await TdcCheck.run(['--base', 'HEAD~2']);
+    expect(invalid.passed).to.equal(false);
+    expect(invalid.results[0].status).to.equal('present');
+  });
+
+  it('keeps declared debt open when its file is renamed or deleted', async () => {
+    const { debt, file } = await addFromFile(HARDCODED_ID);
+    commitAll(root, 'Alice', 'chore: declare the hardcoded id');
+    const stored = await readFile(path.join(root, file), 'utf8');
+    const renamed = CLASS.replace('AccountService', 'RenamedService');
+    execFileSync('git', ['mv', CLASS, renamed], { cwd: root });
+    await TdcScan.run([]);
+    const moved = await TdcCheck.run(['--id', debt.id, '--update-debts']);
+    expect(moved.passed).to.equal(false);
+    expect(moved.results[0].status).to.equal('moved');
+
+    execFileSync('git', ['mv', renamed, CLASS], { cwd: root });
+    await unlink(path.join(root, CLASS));
+    await TdcScan.run([]);
+    const deleted = await TdcCheck.run(['--id', debt.id, '--update-debts']);
+    expect(deleted.passed).to.equal(false);
+    expect(deleted.results[0].status).to.equal('deleted');
+    expect(await readFile(path.join(root, file), 'utf8')).to.equal(stored);
   });
 
   it('add refuses a debt that is not anchored, or that its verifier does not find', async () => {

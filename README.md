@@ -41,8 +41,8 @@ Fair play:
 - The first ledger is the **baseline**, and a commit that changes the rules, their costs or the version of Code
   Analyzer **re-baselines** the debt:
   nobody wins or loses TDC.
-- Merge commits are skipped: the commits of the merged branch already count. With a squash merge, the author of the
-  pull request gets the TDC.
+- Merge commits can show the resulting balance. The branch commits earn their own scores. With a squash merge, the
+  author of the pull request gets the TDC.
 - In CI, `sf tdc check` fails when the ledger is out of date, so that nobody gets the TDC of someone else.
 - Authors are told apart by their email: map the emails of a same person in a `.mailmap`.
 
@@ -63,7 +63,7 @@ Every command supports `--json`; its format is pinned by [`schemas/`](schemas).
 | --- | --- |
 | `sf tdc guide` | How an agent works with sf-tdc: the workflows, what it must never do, the format of a declared debt. |
 | `sf tdc next` | The work queue: the debt to fix, most expensive first, with its file, line and the command that verifies it. `--limit`, `--file`, `--rule`, `--source`. |
-| `sf tdc check --id` | Whether the changes since HEAD paid the debt, created none, and hid none: a suppression (`NOPMD`, `@SuppressWarnings`...) or a change of `.forceignore` or `code-analyzer.yml` is not a payment. Exit code 1 otherwise, with the next steps. |
+| `sf tdc check --id` | Verify repayment and get the next steps. Add `--update-debts` locally to record verified repayments of declared debt in `.tdc/debts`. |
 | `sf tdc add` | Declares debt that the rules don't find, with a verifier (a pattern, or a prompt) that must find it on the current code. |
 | `sf tdc reject` | Sets a declared debt aside: a false positive, for a person to decide. |
 

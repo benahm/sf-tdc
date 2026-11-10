@@ -147,7 +147,7 @@
         "suppressed",
         "unclear"
       ],
-      "description": "- `paid`: the debt is gone, and nothing hid it;\n- `present`: the debt is still there;\n- `moved`: the debt is gone from its file but found again in another one: neither paid nor created;\n- `deleted`: the debt went away with its file: not a payment;\n- `suppressed`: the debt is gone, but a suppression or a change of configuration hid it;\n- `unclear`: the prompt verifier did not agree with itself."
+      "description": "- `paid`: the debt is gone, and nothing hid it;\n- `present`: the debt is still there;\n- `moved`: the debt is gone from its file but found again in another one: neither paid nor created;\n- `deleted`: the debt went away with its file: not a payment;\n- `suppressed`: the debt is gone, but a suppression or a change of configuration hid it;\n- `unclear`: the verifier could not read its files or reach a verdict."
     },
     "Verdict": {
       "type": "object",

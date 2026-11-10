@@ -37,6 +37,9 @@ title: Configuration
 
 Set `TDC_VERIFIER_COMMAND` in your environment to enable prompt verifiers. The command receives the prompt on standard input. See [declared debt](./ai-agents.md#declare-debt).
 
+The plugin rejects unknown configuration keys and invalid values. Rule costs must be nonnegative. During a scan,
+each `rules` override is checked against the Code Analyzer catalog, including rules outside the selected set.
+
 The `code-analyzer.yml` of the project applies too: its rule overrides (severity, tags), its ignored files and its
 suppressions.
 

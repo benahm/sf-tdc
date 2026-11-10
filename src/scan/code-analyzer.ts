@@ -8,7 +8,7 @@ import * as PmdEngine from '@salesforce/code-analyzer-pmd-engine';
 import * as RegexEngine from '@salesforce/code-analyzer-regex-engine';
 
 import type { SourceFile } from '../project/files.js';
-import type { Project } from '../project/project.js';
+import { CONFIG_FILE, TDC_DIR, type Project } from '../project/project.js';
 
 export type Severity = keyof typeof SeverityLevel;
 
@@ -55,7 +55,8 @@ const loadConfig = (root: string): CodeAnalyzerConfig => {
  * pinned by this plugin, so that every developer and the CI get the same violations from the same code.
  */
 export const runCodeAnalyzer: Analyzer = async (project, files) => {
-  const core = new CodeAnalyzer(loadConfig(project.root));
+  const config = loadConfig(project.root);
+  const core = new CodeAnalyzer(config);
   for (const engine of [PmdEngine, RegexEngine, FlowEngine, EslintEngine]) {
     // eslint-disable-next-line no-await-in-loop
     await core.addEnginePlugin(engine.createEnginePlugin());
@@ -73,6 +74,23 @@ export const runCodeAnalyzer: Analyzer = async (project, files) => {
       })
     )
   );
+  const selected = new Set(rules.map((rule) => rule.id));
+  const unselected = Object.keys(project.config.rules).filter((id) => !selected.has(id));
+  if (unselected.length) {
+    const catalog = await core.selectRules(core.getEngineNames());
+    const available = new Set(
+      catalog
+        .getEngineNames()
+        .flatMap((engine) => catalog.getRulesFor(engine).map((rule) => `${engine}:${rule.getName()}`))
+    );
+    const unknown = unselected.filter((id) => {
+      const [engine, rule] = id.split(':');
+      return (
+        !available.has(id) && !(rule && `${engine}:${rule}` === id && config.getRuleOverrideFor(engine, rule).disabled)
+      );
+    });
+    if (unknown.length) throw new Error(`Unknown rule in ${TDC_DIR}/${CONFIG_FILE}.rules: ${unknown.join(', ')}`);
+  }
   if (files.length === 0) return { targetedFiles: [], engines: {}, rules, violations: [] };
 
   const workspace = await core.createWorkspace(

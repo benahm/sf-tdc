@@ -38,6 +38,9 @@ export default class TdcCheck extends SfCommand<TdcCheckResult> {
     'max-debt': Flags.integer({
       summary: messages.getMessage('flags.max-debt.summary'),
     }),
+    'update-debts': Flags.boolean({
+      summary: messages.getMessage('flags.update-debts.summary'),
+    }),
   };
 
   public async run(): Promise<TdcCheckResult> {
@@ -45,7 +48,12 @@ export default class TdcCheck extends SfCommand<TdcCheckResult> {
     const project = await loadProject(process.cwd());
     let check: Check;
     try {
-      check = await checkChanges(project, { base: flags.base, ids: flags.id, maxDebt: flags['max-debt'] });
+      check = await checkChanges(project, {
+        base: flags.base,
+        ids: flags.id,
+        maxDebt: flags['max-debt'],
+        updateDebts: flags['update-debts'],
+      });
     } catch (error) {
       throw toSfError(error);
     }

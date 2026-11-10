@@ -92,6 +92,18 @@ describe('code-analyzer', () => {
     expect(result.engines).to.include.keys('core', 'pmd', 'flow', 'regex');
   });
 
+  it('rejects an override for an unknown rule', async () => {
+    const project = await loadProject(root);
+    project.config.rules = { 'pmd:UnknownExampleRule': { cost: 10 } };
+    try {
+      await scan(project);
+    } catch (error) {
+      expect((error as Error).message).to.include('Unknown rule in .tdc/config.json.rules: pmd:UnknownExampleRule');
+      return;
+    }
+    expect.fail('expected the unknown rule override to be rejected');
+  });
+
   it('identifies the findings without their line numbers', async () => {
     await writeSources(root, { 'classes/AccountService.cls': SERVICE('\n\n    // new lines above\n') });
     const ids = (scanned: ScanResult): string[] =>

@@ -12,18 +12,19 @@ import {
   type LedgerFinding,
 } from '../ledger/ledger.js';
 import { git, showFile } from '../project/git.js';
-import { toPosix, type Project } from '../project/project.js';
+import { TDC_DIR, toPosix, type Project } from '../project/project.js';
 import { scan, toLedger, type Finding } from '../scan/engine.js';
-import { changedFiles, findCheats, type Cheat } from './cheats.js';
+import { changedFiles, findCheats, type ChangedFiles, type Cheat } from './cheats.js';
 import {
   DebtError,
+  DEBTS_DIR,
   locate,
   readDeclaredDebts,
   writeDeclaredDebt,
   type DeclaredDebt,
   type Verdict,
 } from './declared.js';
-import { unanimous, VERIFIER_COMMAND_ENV, verify } from './verifier.js';
+import { unanimous, VERIFIER_COMMAND_ENV, verificationFiles, verify } from './verifier.js';
 
 /** A debt to fix, whatever found it: enough for an agent to act without reading anything else. */
 export type WorkItem = {
@@ -46,7 +47,7 @@ export type WorkItem = {
  * - `moved`: the debt is gone from its file but found again in another one: neither paid nor created;
  * - `deleted`: the debt went away with its file: not a payment;
  * - `suppressed`: the debt is gone, but a suppression or a change of configuration hid it;
- * - `unclear`: the prompt verifier did not agree with itself.
+ * - `unclear`: the verifier could not read its files or reach a verdict.
  */
 export type CheckStatus = 'paid' | 'present' | 'moved' | 'deleted' | 'suppressed' | 'unclear';
 
@@ -65,6 +66,8 @@ export type CheckOptions = {
   ids?: string[];
   /** Highest debt allowed, in TDC. */
   maxDebt?: number;
+  /** Record verified repayments in .tdc/debts. */
+  updateDebts?: boolean;
 };
 
 export type Check = {
@@ -156,7 +159,7 @@ export const resolveIds = (wanted: string[], known: Iterable<string>): string[] 
  * The commit to compare with: where the branch forked from `base`, so that what the target branch got since does not
  * count against the changes. Undefined without a git repository or without commits, when no base was asked for.
  */
-const resolveBase = async (project: Project, base?: string): Promise<{ ref: string; commit: string } | undefined> => {
+const resolveBase = async (project: Project, base?: string): Promise<Base | undefined> => {
   if (!project.gitRoot) {
     if (base === undefined) return undefined;
     throw new DebtError(
@@ -178,11 +181,11 @@ const resolveBase = async (project: Project, base?: string): Promise<{ ref: stri
     );
   }
   try {
-    commit = (await git(project.root, ['merge-base', commit, 'HEAD'])).trim();
+    const ancestor = (await git(project.root, ['merge-base', commit, 'HEAD'])).trim();
+    return { ref, commit: ancestor };
   } catch {
-    // no common ancestor, or a shallow clone: the base itself
+    return { ref, commit, usedTip: true };
   }
-  return { ref, commit };
 };
 
 const readText = async (file: string): Promise<string | undefined> => {
@@ -195,26 +198,30 @@ const readText = async (file: string): Promise<string | undefined> => {
 
 const at = (file: string, line?: number): string => (line ? `${file}:${line}` : file);
 
-/** Asks the verifier of a declared debt, and marks the debt fixed when it is paid. */
+/** Asks the verifier of a declared debt after checking that its files stayed in place. */
 const checkDeclared = async (
   project: Project,
   debt: DeclaredDebt,
-  hidden: (file: string) => boolean
+  hidden: (file: string) => boolean,
+  removed: (file: string) => 'moved' | 'deleted' | undefined
 ): Promise<CheckItem> => {
+  const files = verificationFiles(debt);
+  const item = { id: debt.id, source: debt.source, file: debt.anchors[0].file };
+  const removedStatus = files.map(removed).find(Boolean);
+  if (removedStatus) return { ...item, status: removedStatus };
   const verdicts = await verify(project, debt);
   let status: CheckStatus = unanimous(verdicts, 'fixed')
     ? 'paid'
     : unanimous(verdicts, 'present')
       ? 'present'
       : 'unclear';
-  if (status === 'paid' && debt.anchors.some((anchor) => hidden(anchor.file))) status = 'suppressed';
-  if (status === 'paid') await writeDeclaredDebt(project, { ...debt, status: 'fixed' });
-  return { id: debt.id, source: debt.source, file: debt.anchors[0].file, status, verdicts };
+  if (status === 'paid' && files.some(hidden)) status = 'suppressed';
+  return { ...item, status, verdicts };
 };
 
 const NO_CHANGES: LedgerChanges = { paid: [], deleted: [], created: [], moved: 0 };
 
-type Base = { ref: string; commit: string };
+type Base = { ref: string; commit: string; usedTip?: boolean };
 type SinceBase = NonNullable<Check['sinceBase']>;
 
 const ledgerFailures = (ledgerFile: string, stored: string | undefined, upToDate: boolean): string[] => {
@@ -224,12 +231,17 @@ const ledgerFailures = (ledgerFile: string, stored: string | undefined, upToDate
 
 const baseWarnings = (base: Base | undefined, before: Ledger | undefined, rulesChanged: boolean): string[] => {
   if (!base) return ['Not in a git repository with commits: only the ledger and --max-debt are checked.'];
-  if (!before) return [`${base.ref} has no ledger: nothing to compare with.`];
-  return rulesChanged
+  const warnings = base.usedTip
     ? [
-        `The rules, their costs or the engines changed since ${base.ref}: the debt is re-baselined, its growth is not checked.`,
+        `No merge base found with ${base.ref}. Comparing with its tip may misstate debt growth. Fetch full history (fetch-depth: 0 in GitHub Actions).`,
       ]
     : [];
+  if (!before) warnings.push(`${base.ref} has no ledger: nothing to compare with.`);
+  else if (rulesChanged)
+    warnings.push(
+      `The rules, their costs or the engines changed since ${base.ref}: the debt is re-baselined, its growth is not checked.`
+    );
+  return warnings;
 };
 
 /** The files changed since the base, and the changes that hide debt instead of paying it. */
@@ -237,8 +249,8 @@ const readChanges = async (
   project: Project,
   base: Base | undefined,
   scannedFiles: string[]
-): Promise<{ changed: string[]; deleted: Set<string>; cheats: Cheat[] }> => {
-  if (!base) return { changed: [], deleted: new Set<string>(), cheats: [] };
+): Promise<ChangedFiles & { cheats: Cheat[] }> => {
+  if (!base) return { changed: [], deleted: new Set(), renamedFrom: new Map(), cheats: [] };
   const files = await changedFiles(project, base.commit);
   return { ...files, cheats: await findCheats(project, base.commit, files, scannedFiles) };
 };
@@ -294,25 +306,26 @@ const growthSince = (
   };
 };
 
-/** The open declared debt whose anchors or pattern file the changes touched. */
-const touchedDeclared = (open: DeclaredDebt[], changed: string[]): string[] =>
-  open
-    .filter((item) =>
-      [
-        ...item.anchors.map((anchor) => anchor.file),
-        ...(item.verifier.kind === 'pattern' ? [item.verifier.file] : []),
-      ].some((file) => changed.includes(file))
-    )
+const debtFile = (id: string): string => `${TDC_DIR}/${DEBTS_DIR}/${id}.json`;
+
+/** Touched open debt and any recorded repayments in the diff. */
+const touchedDeclared = (declared: DeclaredDebt[], changed: Set<string>): string[] =>
+  declared
+    .filter((item) => {
+      if (item.status === 'fixed') return changed.has(debtFile(item.id));
+      return item.status === 'confirmed' && verificationFiles(item).some((file) => changed.has(file));
+    })
     .map((item) => item.id);
 
 type TargetContext = {
   project: Project;
   /** Whether the ids were given: their debt must be checked, whatever its verifier. */
   asked: boolean;
-  declared: DeclaredDebt[];
+  declared: Map<string, DeclaredDebt>;
   ruleDebt: Map<string, LedgerFinding>;
   ruleStatus: (id: string, file: string) => CheckStatus;
   hidden: (file: string) => boolean;
+  removed: (file: string) => 'moved' | 'deleted' | undefined;
 };
 
 /** The status of each target, and the warnings of the declared debt that could not be checked. */
@@ -320,15 +333,14 @@ const checkTargets = async (
   targets: string[],
   context: TargetContext
 ): Promise<{ results: CheckItem[]; warnings: string[] }> => {
-  const open = new Map(context.declared.filter((item) => item.status === 'confirmed').map((item) => [item.id, item]));
   const results: CheckItem[] = [];
   const warnings: string[] = [];
   for (const id of targets) {
-    const declaredDebt = open.get(id);
-    if (declaredDebt) {
+    const declaredDebt = context.declared.get(id);
+    if (declaredDebt && declaredDebt.status !== 'rejected') {
       try {
         // eslint-disable-next-line no-await-in-loop
-        results.push(await checkDeclared(context.project, declaredDebt, context.hidden));
+        results.push(await checkDeclared(context.project, declaredDebt, context.hidden, context.removed));
       } catch (error) {
         // a debt the changes only touched: a CI without an agent still checks the rest
         if (context.asked || !(error instanceof DebtError && error.code === 'NO_VERIFIER_COMMAND')) throw error;
@@ -336,11 +348,10 @@ const checkTargets = async (
       }
       continue;
     }
-    const known = context.declared.find((item) => item.id === id);
-    if (known) {
+    if (declaredDebt) {
       throw new DebtError(
         'NOT_OPEN',
-        `${id} is already ${known.status}`,
+        `${id} is already ${declaredDebt.status}`,
         'Take an open debt from `sf tdc next --json`'
       );
     }
@@ -355,6 +366,7 @@ type NextStepsInput = {
   sinceBase?: SinceBase;
   created: WorkItem[];
   unpaid: CheckItem[];
+  unrecorded: string[];
   ledgerUpToDate: boolean;
   again: string;
 };
@@ -365,6 +377,7 @@ const nextStepsAfterFailure = ({
   sinceBase,
   created,
   unpaid,
+  unrecorded,
   ledgerUpToDate,
   again,
 }: NextStepsInput): string[] => [
@@ -374,9 +387,10 @@ const nextStepsAfterFailure = ({
     : []),
   ...unpaid.map((item) =>
     item.status === 'unclear'
-      ? `The verifier of ${item.id} did not agree with itself: make the fix more obvious, or ask a person to review it`
+      ? `Review the verdicts of ${item.id} and check that its verifier can read the source files`
       : `Fix ${item.id} in ${item.file}: it is ${item.status}`
   ),
+  ...unrecorded.map((id) => `Run \`sf tdc check --id ${id} --update-debts\` and commit ${debtFile(id)}`),
   ...(ledgerUpToDate ? [] : ['Run `sf tdc scan`']),
   `Then run \`${again}\``,
 ];
@@ -384,7 +398,7 @@ const nextStepsAfterFailure = ({
 /**
  * Checks the code against the ledger and the base (HEAD by default): the ledger is up to date, the debt did not grow,
  * nothing hid debt, and the debt given with `ids` is paid. Without ids, the debt that the changes paid or touched is
- * listed, and only fails the check when it was hidden.
+ * listed. A verified repayment must be recorded in the declaration before the check can pass.
  */
 export const checkChanges = async (project: Project, options: CheckOptions = {}): Promise<Check> => {
   const ids = options.ids ?? [];
@@ -410,7 +424,10 @@ export const checkChanges = async (project: Project, options: CheckOptions = {})
   const before = baseContent === undefined ? undefined : parseLedger(baseContent);
   const rulesChanged = before !== undefined && !sameRules(before, now);
 
-  const { changed, deleted, cheats } = await readChanges(project, base, result.scannedFiles);
+  const { changed, deleted, renamedFrom, cheats } = await readChanges(project, base, result.scannedFiles);
+  const renamed = new Set(renamedFrom.values());
+  const removed = (file: string): 'moved' | 'deleted' | undefined =>
+    renamed.has(file) ? 'moved' : deleted.has(file) ? 'deleted' : undefined;
   const configChanged = cheats.some((cheat) => cheat.code === 'CONFIG_CHANGED');
   const hidden = (file: string): boolean => configChanged || cheats.some((cheat) => cheat.file === file);
 
@@ -441,28 +458,43 @@ export const checkChanges = async (project: Project, options: CheckOptions = {})
     if (paidIds.has(id)) return hidden(file) ? 'suppressed' : 'paid';
     return 'moved';
   };
+  const declaredById = new Map(declared.map((item) => [item.id, item]));
   const targets = ids.length
-    ? resolveIds(ids, [...ruleDebt.keys(), ...declared.map((item) => item.id)])
+    ? resolveIds(ids, [...ruleDebt.keys(), ...declaredById.keys()])
     : [
         ...[...changes.paid, ...changes.deleted].map((finding) => finding.id),
-        ...touchedDeclared(
-          declared.filter((item) => item.status === 'confirmed'),
-          changed
-        ),
+        ...touchedDeclared(declared, new Set(changed)),
       ];
   const checked = await checkTargets(targets, {
     project,
     asked: ids.length > 0,
-    declared,
+    declared: declaredById,
     ruleDebt,
     ruleStatus,
     hidden,
+    removed,
   });
   const results = checked.results;
 
-  // the debt asked for must be paid; the debt the changes only touched is listed
-  const unpaid = ids.length ? results.filter((item) => ['present', 'suppressed', 'unclear'].includes(item.status)) : [];
+  const unpaid = results.filter((item) => {
+    const declaration = declaredById.get(item.id);
+    if (declaration) return (ids.length > 0 || declaration.status === 'fixed') && item.status !== 'paid';
+    return ids.length > 0 && ['present', 'suppressed', 'unclear'].includes(item.status);
+  });
   failures.push(...unpaid.map((item) => `${item.id} is ${item.status} (${item.file})`));
+
+  const repayments = new Set(
+    results
+      .filter((item) => item.status === 'paid' && declaredById.get(item.id)?.status === 'confirmed')
+      .map((item) => item.id)
+  );
+  const unrecorded = options.updateDebts ? [] : [...repayments];
+  if (options.updateDebts) {
+    await Promise.all(
+      [...repayments].map((id) => writeDeclaredDebt(project, { ...declaredById.get(id)!, status: 'fixed' }))
+    );
+  }
+  failures.push(...unrecorded.map((id) => `${debtFile(id)} is still confirmed after the verifier found it fixed`));
 
   const passed = failures.length === 0;
   const again = ['sf tdc check', ...(options.base ? [`--base ${options.base}`] : []), ...ids.map((id) => `--id ${id}`)];
@@ -479,6 +511,14 @@ export const checkChanges = async (project: Project, options: CheckOptions = {})
     warnings: [...baseWarnings(base, before, rulesChanged), ...judged.warnings, ...checked.warnings],
     nextSteps: passed
       ? ['Commit the changes with .tdc/ledger.json and .tdc/debts']
-      : nextStepsAfterFailure({ cheats, sinceBase, created, unpaid, ledgerUpToDate, again: again.join(' ') }),
+      : nextStepsAfterFailure({
+          cheats,
+          sinceBase,
+          created,
+          unpaid,
+          unrecorded,
+          ledgerUpToDate,
+          again: again.join(' '),
+        }),
   };
 };
