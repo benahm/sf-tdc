@@ -67,8 +67,22 @@ export const renderDashboard = (data: DashboardData): string => {
           </button>
           <button type="button" data-tab="activity" aria-controls="activity" aria-pressed="false">Statement</button>
         </nav>
-        <span class="minibalance number" id="minibalance" hidden></span>
-        <button id="theme" type="button">Switch theme</button>
+        <button
+          id="theme"
+          class="theme-toggle"
+          type="button"
+          aria-label="Dark theme"
+          aria-pressed="true"
+          title="Switch to light theme"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <g class="theme-sun">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4" />
+            </g>
+            <path class="theme-moon" d="M20.9 13.4A9 9 0 0 1 10.6 3.1a9 9 0 1 0 10.3 10.3Z" />
+          </svg>
+        </button>
       </header>
 
       <main>
@@ -198,7 +212,10 @@ export const renderDashboard = (data: DashboardData): string => {
         <section id="debts" aria-label="Debt explorer" hidden>
           <div class="panelhead">
             <div>
-              <h2>The collection book</h2>
+              <div class="debt-heading">
+                <h2>The collection book</h2>
+                <span class="tag">Measured debt · <strong class="number" id="measuredtotal"></strong></span>
+              </div>
               <p class="muted">Inspect a debt, understand its cost, and claim its bounty.</p>
             </div>
             <span class="tag" id="declaredtotal"></span>

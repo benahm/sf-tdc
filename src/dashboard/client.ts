@@ -93,8 +93,6 @@ const fromHash = () => location.hash.slice(2);
 function tab(name) {
   for (const n of TABS) $(n).hidden = n !== name;
   document.querySelectorAll("[data-tab]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tab === name)));
-  /* the statement heads the overview: elsewhere the bar keeps the balance in sight */
-  $("minibalance").hidden = name === "overview";
   /* "#/debts", not "#debts": the browser would scroll the section under the sticky bar */
   if (fromHash() !== name && (name !== "overview" || location.hash)) window.history.replaceState(null, "", "#/" + name);
   window.scrollTo(0, 0);
@@ -106,12 +104,14 @@ window.addEventListener("hashchange", () => {
 });
 const saved = recall("theme");
 let light = saved ? saved === "light" : window.matchMedia("(prefers-color-scheme: light)").matches;
+const themeToggle = $("theme");
 function theme() {
   document.documentElement.dataset.theme = light ? "light" : "dark";
-  text("theme", light ? "Dark theme" : "Light theme");
+  themeToggle.setAttribute("aria-pressed", String(!light));
+  themeToggle.title = light ? "Switch to dark theme" : "Switch to light theme";
 }
 theme();
-$("theme").onclick = () => {
+themeToggle.onclick = () => {
   light = !light;
   remember("theme", light ? "light" : "dark");
   theme();
@@ -123,9 +123,6 @@ text("branch", data.branch + (data.commit ? " · " + data.commit : ""));
 text("generated", "Statement date · " + date(data.generatedAt));
 text("debtcount", fmt(all.length));
 text("collectorcount", fmt(data.players.length));
-text("minibalance", fmt(data.debt) + " TDC");
-$("minibalance").title = "Balance due";
-if (data.debt === 0) $("minibalance").classList.add("zero");
 
 /* Statement of account */
 function countUp(node, value) {
@@ -600,6 +597,7 @@ SEVERITIES.filter((name) => all.some((f) => f.severity === name)).forEach((name)
   o.value = name;
   $("severity").append(o);
 });
+text("measuredtotal", fmt(data.debt) + " TDC");
 text("declaredtotal", fmt(data.declared.reduce((s, d) => s + d.cost, 0)) + " declared TDC · outside balance");
 function showDebt(f) {
   text("detailtitle", f.problem);

@@ -123,15 +123,33 @@ small, .muted { color: var(--muted); }
   line-height: 18px;
   vertical-align: 1px;
 }
-.minibalance {
-  padding: 4px 10px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  font-size: 13px;
-  color: var(--red);
-  white-space: nowrap;
+.theme-toggle[aria-pressed] {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--ink);
 }
-.minibalance.zero { color: var(--green); }
+.theme-toggle[aria-pressed]:hover {
+  border-color: var(--gold-deep);
+  background: var(--soft);
+  color: var(--gold);
+}
+.theme-toggle svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.theme-toggle[aria-pressed="false"] .theme-sun,
+.theme-toggle[aria-pressed="true"] .theme-moon { display: none; }
 main > section { padding-top: 26px; }
 
 /* Statement of account */
@@ -225,6 +243,7 @@ main > section { padding-top: 26px; }
   flex-wrap: wrap;
   margin-bottom: 18px;
 }
+.debt-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
 .periods { display: flex; gap: 5px; }
 .periods button { font-size: 12px; padding: 5px 9px; }
 #chart { position: relative; }
@@ -522,8 +541,7 @@ dialog p.mono { font-size: 13px; }
   .project { max-width: 60%; }
   .nav { order: 9; flex-basis: 100%; margin: 0 -6px; overflow-x: auto; }
   .brand small { display: none; }
-  .minibalance, #theme { margin-left: auto; }
-  .minibalance:not([hidden]) + #theme { margin-left: 0; }
+  #theme { margin-left: auto; }
 }
 @media (max-width: 680px) {
   #branch { display: none; }
