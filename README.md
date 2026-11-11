@@ -3,7 +3,7 @@
 > **Beta.** Please [report issues](https://github.com/benahm/sf-tdc/issues).
 
 A [Salesforce CLI](https://developer.salesforce.com/tools/salesforcecli) plugin that **prices the technical debt** of
-a Salesforce project, **tracks in git who pays it back**, and turns it into a game: ranks and a
+a Salesforce project, **tracks in git who pays it back**, and turns it into a game: a
 leaderboard in its dashboard.
 
 The debt is counted in **TDC, Technical Debt Coins**: 1 TDC is a minute of work to fix a finding. Paying 30 TDC of
@@ -52,7 +52,7 @@ Fair play:
 | --- | --- |
 | `sf tdc init` | Creates `.tdc/config.json`: `--daily-rate`, `--currency`, `--goal-debt` and `--goal-date`. |
 | `sf tdc scan` | Finds and prices the debt, writes the ledger. Use `--dry-run` for a preview, `-d` for a preview of selected folders, and `--report-file report.md` for a Markdown report. |
-| `sf tdc dashboard` | Opens an offline dashboard from the ledger and git history, laid out as a bank statement: balance due and payoff date, debt evolution, bounties, collectors and their ranks (or the team total with `game.leaderboard: "team"`), commit by commit. `--output ./report.html` exports without opening a browser. |
+| `sf tdc dashboard` | Opens an offline dashboard from the ledger and git history, laid out as a bank statement: balance due and payoff date, debt evolution, bounties, the collectors' leaderboard by period (or the team total with `game.leaderboard: "team"`), commit by commit. `--output ./report.html` exports without opening a browser. |
 | `sf tdc check` | CI gate: fails when the ledger is out of date, when the debt grew since `--base <ref>` (`HEAD` by default), when a suppression or a change of configuration hid debt, when a debt given with `--id` is not paid, or when it is above `--max-debt`. |
 
 Every command supports `--json`; its format is pinned by [`schemas/`](schemas).
@@ -116,10 +116,7 @@ The rating (A to E) divides the debt by the cost of writing the code (30 minutes
 
 ## The game
 
-| Rank | TDC earned |
-| --- | ---: |
-| Intern | 0 |
-| Collector | 500 |
-| Bailiff | 1,500 |
-| Debt Collector | 5,000 |
-| Legendary Collector | 15,000 |
+Each commit that repays debt earns its author as many coins as the TDC it repaid; a commit that creates debt costs
+as many. The dashboard ranks the collectors by coins over the last 30 days, 90 days or all time, with their coins per
+week and the share of their commits that repay more than they create. Baselines and changes of rules, costs or
+engines score nothing.

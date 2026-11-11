@@ -15,6 +15,7 @@ type Payload = {
     topRules: Array<[string, Total]>;
     declaredDebt: number;
     files: Array<[string, Total]>;
+    folders: Array<[string, Total]>;
     categories: Array<[string, Total]>;
     big: Bounty[];
     quick: Bounty[];
@@ -49,6 +50,17 @@ const pick = (
   return selected;
 };
 
+/**
+ * The folder that names the kind of metadata: classes for force-app/main/default/classes/A.cls, lwc for a component
+ * bundle; the parent folder outside the default layout.
+ */
+export const folderOf = (file: string): string => {
+  const parts = file.split('/');
+  const root = parts.lastIndexOf('default');
+  if (root >= 0 && root < parts.length - 2) return parts[root + 1];
+  return parts.length > 1 ? parts[parts.length - 2] : '.';
+};
+
 /** An offline report has a small overview and a separate block the explorer parses on demand. */
 export const dashboardPayload = ({ findings, declared, ...data }: DashboardData): Payload => {
   const paths = new Map<string, number>();
@@ -56,6 +68,7 @@ export const dashboardPayload = ({ findings, declared, ...data }: DashboardData)
   const ruleIds = new Map<string, number>();
   const rules: Rule[] = [];
   const files = new Map<string, Total>();
+  const folders = new Map<string, Total>();
   const categories = new Map<string, Total>();
   const ruleTotals = new Map<string, Total>();
   const index = (dictionary: Map<string, number>, value: string): number => {
@@ -71,6 +84,7 @@ export const dashboardPayload = ({ findings, declared, ...data }: DashboardData)
     const ruleIndex = index(ruleIds, rule);
     if (ruleIndex === rules.length) rules.push({ rule, problem, category, severity, url });
     add(files, file, cost);
+    add(folders, folderOf(file), cost);
     add(ruleTotals, rule, cost);
     add(categories, category?.length ? category : rule.split(':')[0], cost);
     const row: MeasuredRow = [id, ruleIndex, index(paths, file), index(snippets, snippet), cost];
@@ -108,6 +122,7 @@ export const dashboardPayload = ({ findings, declared, ...data }: DashboardData)
       topRules: byTotal(ruleTotals).slice(0, 3),
       declaredDebt: totalCost(declared),
       files: byTotal(files).slice(0, 5),
+      folders: byTotal(folders),
       categories: byTotal(categories),
       big: big.map(bounty),
       quick: quick.map(bounty),

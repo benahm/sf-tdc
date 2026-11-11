@@ -1,16 +1,6 @@
 import type { CommitEvent } from '../ledger/history.js';
 import { totalCost } from '../ledger/ledger.js';
 
-export type Rank = { name: string; minCoins: number };
-
-export const RANKS: Rank[] = [
-  { name: 'Intern', minCoins: Number.NEGATIVE_INFINITY },
-  { name: 'Collector', minCoins: 500 },
-  { name: 'Bailiff', minCoins: 1500 },
-  { name: 'Debt Collector', minCoins: 5000 },
-  { name: 'Legendary Collector', minCoins: 15_000 },
-];
-
 export type Player = {
   author: string;
   coins: number;
@@ -20,22 +10,6 @@ export type Player = {
   deleted: number;
   /** Commits that paid or created debt. */
   commits: number;
-  rank: string;
-  /** Progress from the current rank to the next one, between 0 and 1. */
-  nextRank?: { name: string; coinsToGo: number; progress: number };
-};
-
-export const rankOf = (coins: number): Pick<Player, 'rank' | 'nextRank'> => {
-  const index = RANKS.findLastIndex((rank) => coins >= rank.minCoins);
-  const next = RANKS[index + 1];
-  if (!next) return { rank: RANKS[index].name };
-  // the first rank has no floor: its progress starts at 0 coins
-  const floor = Math.max(RANKS[index].minCoins, 0);
-  const progress = Math.max(coins - floor, 0) / (next.minCoins - floor);
-  return {
-    rank: RANKS[index].name,
-    nextRank: { name: next.name, coinsToGo: next.minCoins - coins, progress },
-  };
 };
 
 /** Players sorted by the TDC they earned. Authors are told apart by email: map aliases with a .mailmap. */
@@ -57,7 +31,6 @@ export const buildLeaderboard = (events: CommitEvent[]): Player[] => {
         deleted: totalCost(authorEvents.flatMap((event) => event.deleted)),
         commits: authorEvents.filter((event) => event.paid.length + event.created.length + event.deleted.length > 0)
           .length,
-        ...rankOf(coins),
       };
     })
     .sort((a, b) => b.coins - a.coins || a.author.localeCompare(b.author));
@@ -75,6 +48,5 @@ export const teamOf = (players: Player[], name: string): Player => {
     created: sum('created'),
     deleted: sum('deleted'),
     commits: sum('commits'),
-    ...rankOf(coins),
   };
 };

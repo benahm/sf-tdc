@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { locate, readDeclaredDebts } from '../debt/declared.js';
-import { buildLeaderboard, RANKS, teamOf, type Player } from '../game/leaderboard.js';
+import { buildLeaderboard, teamOf, type Player } from '../game/leaderboard.js';
 import { forecast, price, type Forecast, type Price } from '../game/score.js';
 import { readCatalog } from '../ledger/catalog.js';
 import { readHistory, type CommitKind } from '../ledger/history.js';
@@ -32,10 +32,7 @@ export type DashboardFinding = {
 export type DashboardChange = Pick<LedgerFinding, 'id' | 'rule' | 'file' | 'cost'>;
 
 /** A player of the leaderboard, without email: the report is meant to be shared. */
-export type DashboardPlayer = Pick<
-  Player,
-  'author' | 'coins' | 'paid' | 'created' | 'deleted' | 'commits' | 'rank' | 'nextRank'
->;
+export type DashboardPlayer = Pick<Player, 'author' | 'coins' | 'paid' | 'created' | 'deleted' | 'commits'>;
 
 export type DashboardData = {
   version: number;
@@ -57,7 +54,6 @@ export type DashboardData = {
   catalog: boolean;
   /** One player named after the team when the leaderboard is "team". */
   players: DashboardPlayer[];
-  ranks: Array<{ name: string; minCoins: number }>;
   history: Array<{
     sha: string;
     date: string;
@@ -234,10 +230,7 @@ export const dashboardData = async (
       created: player.created,
       deleted: player.deleted,
       commits: player.commits,
-      rank: player.rank,
-      nextRank: player.nextRank,
     })),
-    ranks: RANKS.map((rank) => ({ name: rank.name, minCoins: Math.max(rank.minCoins, 0) })),
     history: events.map((event) => ({
       sha: event.sha,
       date: event.date,

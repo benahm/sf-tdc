@@ -108,7 +108,7 @@ describe('dashboard', () => {
     commitAll(root, 'Bob', 'fix: debug', '2026-10-02T10:00:00Z');
     const data = await dashboardData(await loadProject(root));
     expect(data.players).to.have.length(1);
-    expect(data.players[0]).to.include({ author: 'Bob', coins: 5, paid: 5, rank: 'Intern' });
+    expect(data.players[0]).to.include({ author: 'Bob', coins: 5, paid: 5 });
     expect(data.history[1]).to.include({ coins: 5 });
     expect(data.history[1].paidFindings[0]).to.have.all.keys('id', 'rule', 'file', 'cost');
     expect(JSON.stringify(data.players)).not.to.include('@');
@@ -122,7 +122,7 @@ describe('dashboard', () => {
     await writeFile(path.join(root, '.tdc/config.json'), JSON.stringify({ game: { leaderboard: 'team' } }));
     const data = await dashboardData(await loadProject(root));
     expect(data.players).to.have.length(1);
-    expect(data.players[0]).to.include({ author: 'The team', coins: 5, paid: 5, rank: 'Intern' });
+    expect(data.players[0]).to.include({ author: 'The team', coins: 5, paid: 5 });
     expect(JSON.stringify(data)).not.to.match(/Alice|Bob/);
   });
 

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { expect } from 'chai';
 
 import { dashboardData } from '../../src/dashboard/data.js';
-import { buildLeaderboard, rankOf } from '../../src/game/leaderboard.js';
+import { buildLeaderboard } from '../../src/game/leaderboard.js';
 import { forecast } from '../../src/game/score.js';
 import { readHistory } from '../../src/ledger/history.js';
 import { writeLedger } from '../../src/ledger/ledger.js';
@@ -189,15 +189,5 @@ describe('history and leaderboard', () => {
     const prediction = forecast(events, { debt: 0, date: '2026-12-31' }, Date.parse('2026-10-02T10:00:00Z'));
     expect(prediction?.paidPerDay).to.equal(30);
     expect(prediction?.goal?.progress).to.equal(1);
-  });
-
-  it('ranks the players by coins', () => {
-    expect(rankOf(-10).rank).to.equal('Intern');
-    expect(rankOf(250).nextRank).to.deep.equal({
-      name: 'Collector',
-      coinsToGo: 250,
-      progress: 0.5,
-    });
-    expect(rankOf(20_000)).to.deep.equal({ rank: 'Legendary Collector' });
   });
 });

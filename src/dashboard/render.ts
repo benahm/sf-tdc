@@ -102,8 +102,10 @@ export const renderDashboard = (data: DashboardData): string => {
               <h1>${hasRepaymentHistory ? 'Balance due' : baselineTitle}</h1>
               <div class="balance number" id="outstanding"><b id="outstandingvalue">0</b> <span>TDC</span></div>
               <small id="price"></small><br />
-              <small id="initialcount"${hasRepaymentHistory ? ' hidden' : ''}></small>
-              <span class="drift" id="drift" hidden></span>
+              <small id="initialcount"></small>
+              <div class="chips">
+                <span class="drift" id="trend" hidden></span><span class="drift" id="drift" hidden></span>
+              </div>
             </div>
             <div class="stmt-side"${hasRepaymentHistory ? ' hidden' : ''}>
               <div class="eyebrow">Configured scan scope</div>
@@ -117,6 +119,16 @@ export const renderDashboard = (data: DashboardData): string => {
               <div class="freedom number gold" id="freedom"></div>
               <small id="pace"></small>
               <small class="muted">Linear estimate on committed ledgers, not a delivery commitment.</small>
+            </div>
+          </section>
+
+          <section class="panel objective" id="objective">
+            <div>
+              <div class="eyebrow">Repayment objective</div>
+              <h2 id="goaltitle"></h2>
+              <p class="muted" id="goaltext"></p>
+              <div id="goaltrack" class="slot"><div id="goalprogress" class="fill" style="width: 0"></div></div>
+              <p class="muted" id="forecast"></p>
             </div>
           </section>
 
@@ -142,6 +154,15 @@ export const renderDashboard = (data: DashboardData): string => {
               <small>Earned by the collectors</small>
             </div>
           </div>
+          <section class="panel nextmove" aria-labelledby="nextmovetitle">
+            <div class="panelhead">
+              <div>
+                <div class="eyebrow">Your next move</div>
+                <h2 id="nextmovetitle">Three ways to lower the balance today</h2>
+              </div>
+            </div>
+            <div class="moves" id="moves"></div>
+          </section>
           <div class="panel"${hasRepaymentHistory ? '' : ' hidden'}>
             <div class="panelhead">
               <div>
@@ -156,11 +177,12 @@ export const renderDashboard = (data: DashboardData): string => {
             </div>
             <div id="chart"></div>
             <div class="legend" id="legend">
-              <span>Measured debt</span><span class="reference">New baseline</span
-              ><span class="target" id="legendgoal">Goal</span>
+              <span>Measured debt</span><span class="projection" id="legendprojection">Projection at the current pace</span
+              ><span class="reference">New baseline</span><span class="target" id="legendgoal">Goal</span>
             </div>
             <p class="muted" style="font-size: 12px; margin-top: 10px">
-              Debt written off with deleted files lowers the balance. Gaps mark a new baseline after a merge,
+              The dashed line extends the pace since the latest baseline, from today. Debt written off with deleted
+              files lowers the balance. Gaps mark a new baseline after a merge,
               a break in the ledger history or a change of rules, costs or engines.
             </p>
           </div>
@@ -174,11 +196,11 @@ export const renderDashboard = (data: DashboardData): string => {
               <div class="panelhead">
                 <div>
                   <div class="eyebrow">Where the debt lives</div>
-                  <h2>Collection notices</h2>
+                  <h2>Debt by folder</h2>
                 </div>
-                <span class="tag">Boss files</span>
+                <span class="tag">Measured debt</span>
               </div>
-              <div class="notices" id="files"></div>
+              <div class="categories" id="folders"></div>
             </section>
             <section class="panel">
               <div class="panelhead">
@@ -195,10 +217,20 @@ export const renderDashboard = (data: DashboardData): string => {
               </p>
             </section>
           </div>
+          <section class="panel debtors">
+            <div class="panelhead">
+              <div>
+                <div class="eyebrow">Collection notices</div>
+                <h2>Files that owe the most</h2>
+              </div>
+              <span class="tag">Top 5 files</span>
+            </div>
+            <div class="notices" id="files"></div>
+          </section>
           <section class="panel bountyboard">
             <div class="panelhead">
               <div>
-                <div class="eyebrow">Your next move</div>
+                <div class="eyebrow">Claim a bounty</div>
                 <h2>Bounties</h2>
               </div>
               <span class="tag">1 TDC repaid = 1 <svg class="coinicon" viewBox="0 0 64 64" aria-label="coin" role="img"><use href="#tdc-coin" width="64" height="64" /></svg></span>
@@ -216,15 +248,22 @@ export const renderDashboard = (data: DashboardData): string => {
               </div>
             </div>
           </section>
-          <section class="panel objective">
-            <div>
-              <div class="eyebrow">Repayment objective</div>
-              <h2 id="goaltitle"></h2>
-              <p class="muted" id="goaltext"></p>
-              <div id="goaltrack" class="slot"><div id="goalprogress" class="fill" style="width: 0"></div></div>
-              <p class="muted" id="forecast"></p>
-            </div>
-          </section>
+          <div class="split"${hasRepaymentHistory ? '' : ' hidden'}>
+            <section class="panel">
+              <div class="panelhead">
+                <h2>Latest statement lines</h2>
+                <button type="button" class="link" data-go="activity">Full statement</button>
+              </div>
+              <div id="recentlines"></div>
+            </section>
+            <section class="panel">
+              <div class="panelhead">
+                <h2>Top collectors · 30 days</h2>
+                <button type="button" class="link" data-go="collectors">Leaderboard</button>
+              </div>
+              <ol class="toplist" id="topcollectors"></ol>
+            </section>
+          </div>
         </section>
 
         <section id="debts" aria-label="Debt explorer" hidden>
@@ -242,23 +281,20 @@ export const renderDashboard = (data: DashboardData): string => {
             Declared debt is tracked separately. It does not contribute to the measured balance or earn coins. Run sf
             tdc scan before generating the report to include your latest code changes.
           </p>
+          <div class="views" role="group" aria-label="Saved views">
+            <button type="button" data-view="all" aria-pressed="true">All debts</button>
+            <button type="button" data-view="quick" aria-pressed="false">Quick wins · up to 15 TDC</button>
+            <button type="button" data-view="big" aria-pressed="false">Big bounties · 60 TDC and more</button>
+          </div>
           <div class="toolbar">
             <label class="sr" for="search">Search debts</label
             ><input id="search" type="search" placeholder="Search file, rule, problem or ID…" /><label
               class="sr"
-              for="source"
-              >Source</label
-            ><select id="source">
-              <option value="all">All sources</option>
-              <option value="code-analyzer">Measured · analyzer</option>
-              <option value="agent">Declared · agent</option>
-              <option value="human">Declared · human</option></select
-            ><label class="sr" for="severity">Severity</label
-            ><select id="severity">
-              <option value="all">All severities</option></select
-            ><label class="sr" for="engine">Category</label
-            ><select id="engine">
-              <option value="all">All categories</option></select
+              for="group"
+              >Group debts</label
+            ><select id="group">
+              <option value="file">Group by file</option>
+              <option value="none">No grouping</option></select
             ><label class="sr" for="sort">Sort debts</label
             ><select id="sort">
               <option value="cost">Highest cost</option>
@@ -266,22 +302,15 @@ export const renderDashboard = (data: DashboardData): string => {
             ><button type="button" id="reset" hidden>Clear filters</button>
           </div>
           <p id="results" class="muted" aria-live="polite"></p>
-          <div class="tablewrap">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Finding / file</th>
-                  <th scope="col">Rule / source</th>
-                  <th scope="col">Severity</th>
-                  <th scope="col" class="num">TDC</th>
-                </tr>
-              </thead>
-              <tbody id="rows"></tbody>
-            </table>
-          </div>
-          <div class="pager">
-            <button type="button" id="previous">Previous</button><span id="page" class="number"></span
-            ><button type="button" id="nextpage">Next</button>
+          <div class="explorer">
+            <aside class="panel facets" id="facets" aria-label="Filters"></aside>
+            <div class="panel debtlist">
+              <div id="rows"></div>
+              <div class="pager">
+                <button type="button" id="previous">Previous</button><span id="page" class="number"></span
+                ><button type="button" id="nextpage">Next</button>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -291,7 +320,11 @@ export const renderDashboard = (data: DashboardData): string => {
               <h2>The collectors</h2>
               <p class="muted">Coins earned by repaying debt, lost by creating it. Baselines and revaluations score nothing.</p>
             </div>
-            <div class="ladder" id="ladder" aria-label="Ranks"></div>
+            <div class="periods" aria-label="Leaderboard period">
+              <button type="button" data-season="30" aria-pressed="false">30 days</button>
+              <button type="button" data-season="90" aria-pressed="false">90 days</button>
+              <button type="button" data-season="0" aria-pressed="true">All time</button>
+            </div>
           </div>
           <div class="podium" id="podium"></div>
           <div class="tablewrap" id="players">
@@ -300,7 +333,7 @@ export const renderDashboard = (data: DashboardData): string => {
                 <tr>
                   <th scope="col">#</th>
                   <th scope="col">Collector</th>
-                  <th scope="col">Rank</th>
+                  <th scope="col">Coins per week · 12 weeks</th>
                   <th scope="col" class="num">Repaid</th>
                   <th scope="col" class="num">New debt</th>
                   <th scope="col" class="num">Coins</th>
